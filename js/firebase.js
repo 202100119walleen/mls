@@ -49,45 +49,86 @@ const FirebaseModule = (function() {
     }
   }
 
+  let lastStatus = 'connecting';
+  let lastMessage = '';
+
   // Update live status badge in UI
   function updateStatusBadge(status, message = '') {
+    lastStatus = status;
+    lastMessage = message;
     const badges = document.querySelectorAll('.firebase-status-badge');
     badges.forEach(badge => {
+      badge.style.cursor = 'pointer';
+      badge.onclick = () => retryConnection(true);
+
       if (status === 'connected') {
-        badge.className = 'firebase-status-badge inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200';
+        badge.className = 'firebase-status-badge cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition';
         badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Firebase Cloud Sync Active';
-        badge.title = 'Connected to Cloud Firestore (jobacsmls). Realtime sync enabled.';
+        badge.title = 'Connected to Cloud Firestore (jobacsmls). Realtime sync enabled. Click to test sync.';
       } else if (status === 'connecting') {
-        badge.className = 'firebase-status-badge inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200';
+        badge.className = 'firebase-status-badge cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition';
         badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping"></span> Connecting Firebase...';
+        badge.title = 'Connecting to Firebase... Click to retry.';
       } else if (status === 'offline') {
-        badge.className = 'firebase-status-badge inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200';
+        badge.className = 'firebase-status-badge cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition';
         badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Local Cache Active';
-        badge.title = 'Running in offline/local mode. ' + message;
+        badge.title = 'Running in offline/local cache mode. Click to retry cloud connection. ' + message;
       } else {
-        badge.className = 'firebase-status-badge inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200';
-        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Firestore Standby';
-        badge.title = 'Firestore connection standby: ' + message;
+        badge.className = 'firebase-status-badge cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition';
+        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Firestore Standby (Click to Retry)';
+        badge.title = 'Firestore connection standby: ' + (message || 'Click to test cloud connection.');
       }
     });
   }
 
   // Test connection to Firestore
-  async function testConnection() {
-    if (!db) return;
+  async function testConnection(notifyOnSuccess = false) {
+    if (!db) {
+      updateStatusBadge('offline', 'Firebase database not initialized');
+      return false;
+    }
+    updateStatusBadge('connecting');
     try {
       const snapshot = await db.collection('listings').limit(1).get();
       isConnected = true;
       updateStatusBadge('connected');
       console.log('[Firebase Firestore] Connected successfully! Document count check ok.');
+      if (notifyOnSuccess && typeof MLSApp !== 'undefined' && MLSApp.showToast) {
+        MLSApp.showToast('Connected to Firebase Cloud Firestore! Cloud synchronization active.', 'success');
+      }
+      return true;
     } catch (err) {
       console.warn('[Firebase Firestore] Connection check notice:', err.message);
+      let userFriendlyMsg = err.message;
       if (err.code === 'permission-denied') {
-        updateStatusBadge('error', 'Check Firestore Security Rules in Firebase Console');
+        userFriendlyMsg = 'Security rules restricted. If you just published rules, refresh your browser tab!';
+        updateStatusBadge('error', userFriendlyMsg);
+      } else if (err.message && err.message.includes('does not exist')) {
+        userFriendlyMsg = 'Firestore Database needs to be created in Firebase Console (Build > Firestore Database > Create Database).';
+        updateStatusBadge('error', userFriendlyMsg);
       } else {
-        updateStatusBadge('offline', err.message);
+        updateStatusBadge('offline', userFriendlyMsg);
       }
+      if (notifyOnSuccess && typeof MLSApp !== 'undefined' && MLSApp.showToast) {
+        MLSApp.showToast('Firestore Notice: ' + userFriendlyMsg, 'warning');
+      }
+      return false;
     }
+  }
+
+  // Explicit retry triggered on click or tab focus
+  function retryConnection(interactive = true) {
+    testConnection(interactive);
+  }
+
+  // Auto retry when user refocuses tab
+  if (typeof window !== 'undefined') {
+    window.addEventListener('focus', () => {
+      if (!isConnected) {
+        console.log('[Firebase] Window focused, re-testing Firestore connection...');
+        testConnection(false);
+      }
+    });
   }
 
   // Subscribe to real-time changes in Firestore collection
