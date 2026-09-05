@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Iligan City MLS - Find Houses for Sale & Rent | Northern Mindanao, Philippines</title>
+  <meta name="description" content="Discover premier houses, subdivisions, and apartments for sale or rent in Iligan City, Lanao del Norte, Philippines. Interactive Leaflet MLS map search and realtor management portal.">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              900: '#0f172a'
+            }
+          },
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Leaflet Free Map CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body class="min-h-full flex flex-col antialiased text-slate-800 bg-slate-50 selection:bg-blue-600 selection:text-white">
+
+  <!-- TOP NAVIGATION -->
+  <header class="sticky top-0 z-30 glass-header border-b border-slate-200/80 shadow-sm transition-all">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      
+      <!-- Brand Logo -->
+      <div class="flex items-center gap-3">
+        <a href="#" class="flex items-center gap-2.5 text-slate-900 group">
+          <div class="w-10 h-10 rounded-xl bg-slate-950 text-white flex items-center justify-center font-black text-lg shadow-md group-hover:bg-blue-600 transition">
+            <i class="fa-solid fa-house-chimney"></i>
+          </div>
+          <div>
+            <div class="font-extrabold text-lg tracking-tight text-slate-900 leading-none">ILIGAN<span class="text-blue-600">MLS</span></div>
+            <div class="text-[10px] font-semibold text-slate-400 tracking-wider uppercase">Iligan City, Philippines</div>
+          </div>
+        </a>
+      </div>
+
+      <!-- Quick Action Buttons -->
+      <div class="flex items-center gap-2.5">
+        
+        <!-- Financing / Loan Estimator Modal Trigger -->
+        <button onclick="MLSApp.openCalculatorModal()" 
+                class="px-3.5 py-2 bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-slate-200 shadow-sm"
+                title="Calculate Philippine home loan interest, amortization & income requirements">
+          <i class="fa-solid fa-calculator text-blue-600"></i>
+          <span class="hidden sm:inline">Loan Estimator</span>
+        </button>
+
+        <!-- About MLS & Brokerage Link -->
+        <a href="#aboutSection" 
+           class="px-3.5 py-2 bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-slate-200 shadow-sm"
+           title="Learn more about Iligan City MLS and brokerage services">
+          <i class="fa-solid fa-circle-info text-blue-600"></i>
+          <span>About</span>
+        </a>
+
+        <!-- Realtor Active Pill (Visible only when logged in as admin) -->
+        <div id="navRealtorActiveBadge" class="hidden items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl text-xs font-bold shadow-sm">
+          <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+          <span class="hidden md:inline text-[11px] font-semibold">Admin Active</span>
+          <button onclick="MLSApp.lockRealtorMode()" title="Lock Realtor Portal and Exit" class="ml-1 text-slate-400 hover:text-rose-600 transition p-0.5">
+            <i class="fa-solid fa-lock text-[11px]"></i>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- REALTOR ADMIN BAR (Displayed when Realtor Portal is authenticated and active) -->
+  <div id="realtorAdminBar" class="hidden bg-slate-950 text-white border-b border-slate-800 py-3 px-4 sm:px-8 transition-all">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <span class="w-3 h-3 rounded-full bg-amber-400 animate-ping"></span>
+        <div>
+          <span class="text-xs font-bold text-amber-400 uppercase tracking-widest">Realtor Admin Portal Active</span>
+          <span class="text-xs text-slate-400 ml-2 hidden sm:inline">Manage listings in Iligan City: update photos, prices, coordinates, & specs.</span>
+        </div>
+      </div>
+
+      <!-- Quick Stats & Actions -->
+      <div class="flex flex-wrap items-center gap-3 text-xs">
+        <div class="flex items-center gap-4 bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800">
+          <div><span class="text-slate-400">Total:</span> <strong id="realtorTotalListings" class="text-white">0</strong></div>
+          <div class="w-px h-3 bg-slate-700"></div>
+          <div><span class="text-slate-400">Sale:</span> <strong id="realtorSaleCount" class="text-emerald-400">0</strong></div>
+          <div class="w-px h-3 bg-slate-700"></div>
+          <div><span class="text-slate-400">Rent:</span> <strong id="realtorRentCount" class="text-sky-400">0</strong></div>
+          <div class="w-px h-3 bg-slate-700"></div>
+          <div><span class="text-slate-400">Portfolio:</span> <strong id="realtorPortfolioValue" class="text-white">₱0</strong></div>
+        </div>
+
+        <button onclick="MLSApp.openAddModal()" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg transition flex items-center gap-1 shadow-sm">
+          <i class="fa-solid fa-plus"></i> New Property
+        </button>
+
+        <button onclick="MLSApp.resetDemoData()" title="Restore original houses" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-lg transition flex items-center gap-1">
+          <i class="fa-solid fa-rotate-left"></i> Reset Demo
+        </button>
+
+        <button onclick="MLSApp.lockRealtorMode()" title="Lock Realtor Portal and Exit" class="px-2.5 py-1.5 bg-rose-950/80 hover:bg-rose-700 text-rose-300 hover:text-white font-semibold rounded-lg transition flex items-center gap-1.5 border border-rose-800/80 shadow-sm">
+          <i class="fa-solid fa-lock text-[11px]"></i> Lock & Exit
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEARCH & FILTER TOOLBAR -->
+  <section class="bg-white border-b border-slate-200/80 sticky top-16 z-20 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
+      <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+        
+        <!-- Left: Search input + Buy/Rent Toggle -->
+        <div class="flex flex-1 flex-col sm:flex-row items-center gap-2.5">
+          
+          <!-- Segmented Buy/Rent Filter -->
+          <div class="flex p-1 bg-slate-100 rounded-xl border border-slate-200/60 w-full sm:w-auto">
+            <button class="type-filter-tab px-3.5 py-1.5 text-xs font-bold rounded-lg transition bg-slate-900 text-white" data-type="all">All</button>
+            <button class="type-filter-tab px-3.5 py-1.5 text-xs font-bold rounded-lg transition text-slate-600 hover:bg-slate-200/70" data-type="sale">Buy</button>
+            <button class="type-filter-tab px-3.5 py-1.5 text-xs font-bold rounded-lg transition text-slate-600 hover:bg-slate-200/70" data-type="rent">Rent</button>
+          </div>
+
+          <!-- Live Search Input for Iligan City Barangays -->
+          <div class="relative flex-1 w-full">
+            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input type="text" 
+                   id="heroSearchInput" 
+                   placeholder="Search barangay or area (e.g. Pala-o, Tibanga, Tubod, Suarez, Buru-un, Hinaplanon)..." 
+                   class="w-full pl-9 pr-20 py-2 bg-slate-50 focus:bg-white text-xs text-slate-800 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition">
+            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-mono bg-slate-200/60 px-1.5 py-0.5 rounded">Enter ↵</span>
+          </div>
+
+        </div>
+
+        <!-- Right: Filter Dropdowns & View Toggles -->
+        <div class="flex flex-wrap items-center gap-2">
+          
+          <!-- Price Filter (Philippine Peso) -->
+          <select id="filterPriceSelect" class="px-2.5 py-2 bg-slate-50 hover:bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-600">
+            <option value="all">Price: Any</option>
+            <option value="0-30000">Under ₱30k /mo (Rent)</option>
+            <option value="0-4000000">Under ₱4,000,000</option>
+            <option value="4000000-8000000">₱4M - ₱8M</option>
+            <option value="8000000-15000000">₱8M - ₱15M</option>
+            <option value="15000000-999999999">₱15M+</option>
+          </select>
+
+          <!-- Beds Filter -->
+          <select id="filterBedsSelect" class="px-2.5 py-2 bg-slate-50 hover:bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-600">
+            <option value="any">Beds: Any</option>
+            <option value="1">1+ Beds</option>
+            <option value="2">2+ Beds</option>
+            <option value="3">3+ Beds</option>
+            <option value="4">4+ Beds</option>
+            <option value="5">5+ Beds</option>
+          </select>
+
+          <!-- Property Type Filter -->
+          <select id="filterPropertyType" class="px-2.5 py-2 bg-slate-50 hover:bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-600">
+            <option value="all">Property: All</option>
+            <option value="Single Family">Single Family Home</option>
+            <option value="Condo">Condo / Apartment</option>
+            <option value="Townhouse">Townhouse</option>
+            <option value="Villa">Luxury Villa</option>
+          </select>
+
+          <!-- Sort Filter -->
+          <select id="sortSelect" class="px-2.5 py-2 bg-slate-50 hover:bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-600">
+            <option value="newest">Sort: Newest</option>
+            <option value="price-asc">Price: Low to High</option>
+            <option value="price-desc">Price: High to Low</option>
+            <option value="beds">Most Bedrooms</option>
+            <option value="sqft">Largest Area (sqm)</option>
+          </select>
+
+          <!-- View Mode Switcher -->
+          <div class="hidden sm:flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200/60 ml-1">
+            <button id="viewSplitBtn" onclick="MLSApp.setViewMode('split')" title="Split View (List + Map)" class="p-1.5 rounded-lg text-xs bg-white text-slate-900 shadow-sm transition">
+              <i class="fa-solid fa-table-columns"></i>
+            </button>
+            <button id="viewGridBtn" onclick="MLSApp.setViewMode('grid')" title="Cards Grid Only" class="p-1.5 rounded-lg text-xs text-slate-600 hover:text-slate-900 transition">
+              <i class="fa-solid fa-grip"></i>
+            </button>
+            <button id="viewMapBtn" onclick="MLSApp.setViewMode('map')" title="Full Map View" class="p-1.5 rounded-lg text-xs text-slate-600 hover:text-slate-900 transition">
+              <i class="fa-solid fa-map-location-dot"></i>
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- MAIN VIEWPORT CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div class="flex flex-col lg:flex-row gap-6 items-start">
+
+      <!-- LEFT COLUMN: PROPERTY CARDS FEED -->
+      <div id="listingsColumn" class="w-full lg:w-7/12 flex flex-col">
+        
+        <!-- Results Bar -->
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h1 class="text-xl font-black text-slate-900 tracking-tight" id="resultsTitle">Properties in Iligan City, Philippines</h1>
+            <p class="text-xs text-slate-500 font-medium" id="resultsCount">Loading available homes in Iligan City...</p>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button onclick="MLSApp.resetFilters()" class="text-xs font-semibold text-slate-500 hover:text-blue-600 transition flex items-center gap-1">
+              <i class="fa-solid fa-arrow-rotate-right text-[10px]"></i> Reset
+            </button>
+          </div>
+        </div>
+
+        <!-- Cards Grid -->
+        <div id="propertyGrid" class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <!-- Property cards populated via JS -->
+        </div>
+
+      </div>
+
+      <!-- RIGHT COLUMN: INTERACTIVE LEAFLET MAP -->
+      <div id="mapColumn" class="w-full lg:w-5/12 sticky top-36">
+        <div class="bg-white rounded-3xl overflow-hidden border border-slate-200/80 shadow-md flex flex-col">
+          
+          <!-- Map Header -->
+          <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-white/90 backdrop-blur z-10">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+              <span class="text-xs font-bold text-slate-800 uppercase tracking-wider">Iligan City Map</span>
+            </div>
+            <div class="text-[11px] text-slate-500 font-medium">
+              <i class="fa-solid fa-location-dot text-blue-600 mr-1"></i> Northern Mindanao, PH
+            </div>
+          </div>
+
+          <!-- Leaflet Map Container -->
+          <div id="mainMap" class="w-full relative z-0"></div>
+
+          <!-- Map Footer Note -->
+          <div class="px-4 py-2.5 bg-slate-50 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between">
+            <span>Click any price pill to view property</span>
+            <span class="text-slate-400">OpenStreetMap Free API</span>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ============================================== -->
+  <!-- SECTION: ABOUT ILIGAN MLS & REALTY SERVICES    -->
+  <!-- ============================================== -->
+  <section id="aboutSection" class="bg-white border-t border-slate-200 mt-12 py-14 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto">
+      
+      <!-- Section Header -->
+      <div class="max-w-2xl mx-auto text-center mb-12">
+        <div class="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-full mb-3 border border-blue-100">
+          <i class="fa-solid fa-building-shield"></i>
+          <span>Iligan City Multiple Listing Service (MLS)</span>
+        </div>
+        <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+          Trusted Real Estate Network in Iligan City
+        </h2>
+        <p class="text-sm text-slate-500 mt-2">
+          Your premier portal for verified residential and commercial properties across Iligan City, Lanao del Norte, and Region X Northern Mindanao.
+        </p>
+      </div>
+
+      <!-- 3 Feature Pillars -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        
+        <div class="p-6 rounded-3xl bg-slate-50 border border-slate-200/80 hover:border-blue-300 transition shadow-sm">
+          <div class="w-12 h-12 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center text-xl mb-4 font-bold">
+            <i class="fa-solid fa-certificate"></i>
+          </div>
+          <h3 class="text-base font-bold text-slate-900 mb-2">Licensed Brokerage</h3>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            All listings are curated and vetted under licensed Real Estate Brokers accredited by the Professional Regulation Commission (PRC) and DHSUD Northern Mindanao. Clean titles (TCT) and transparent legal documentation guaranteed.
+          </p>
+          <div class="mt-4 pt-3 border-t border-slate-200/60 flex items-center gap-2 text-[11px] text-slate-500 font-medium">
+            <i class="fa-solid fa-id-card text-blue-500"></i>
+            <span>PRC Lic #0028911 | DHSUD Reg #R10-B</span>
+          </div>
+        </div>
+
+        <div class="p-6 rounded-3xl bg-slate-50 border border-slate-200/80 hover:border-blue-300 transition shadow-sm">
+          <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl mb-4 font-bold">
+            <i class="fa-solid fa-map-location-dot"></i>
+          </div>
+          <h3 class="text-base font-bold text-slate-900 mb-2">Complete Iligan Coverage</h3>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            From premier executive subdivisions in <strong>Pala-o</strong>, university housing near MSU-IIT in <strong>Tibanga</strong>, to commercial properties in <strong>Tubod</strong> and scenic coastal estates in <strong>Buru-un</strong>.
+          </p>
+          <div class="mt-4 pt-3 border-t border-slate-200/60 flex items-center gap-2 text-[11px] text-slate-500 font-medium">
+            <i class="fa-solid fa-compass text-emerald-500"></i>
+            <span>Interactive GPS & OpenStreetMap Pins</span>
+          </div>
+        </div>
+
+        <div class="p-6 rounded-3xl bg-slate-50 border border-slate-200/80 hover:border-blue-300 transition shadow-sm">
+          <div class="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl mb-4 font-bold">
+            <i class="fa-solid fa-hand-holding-dollar"></i>
+          </div>
+          <h3 class="text-base font-bold text-slate-900 mb-2">Financing & Loan Assistance</h3>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            Comprehensive assistance for Pag-IBIG Housing Loans (HDMF) and commercial bank mortgage pre-qualification (BDO, BPI, Metrobank, Security Bank). Use our live estimator to calculate amortizations.
+          </p>
+          <div class="mt-4 pt-3 border-t border-slate-200/60 flex items-center gap-2 text-[11px] text-slate-500 font-medium">
+            <i class="fa-solid fa-calculator text-indigo-500"></i>
+            <span>Pag-IBIG & Bank Loan Support</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Brokerage Info Bar & Discrete Realtor Access -->
+      <div class="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-2xl bg-slate-800 text-amber-400 flex items-center justify-center text-2xl font-bold border border-slate-700">
+            <i class="fa-solid fa-landmark"></i>
+          </div>
+          <div>
+            <div class="text-sm font-bold text-white">Iligan Premier Realty & Associates</div>
+            <div class="text-xs text-slate-400">Main Office: Villa Verde, Brgy. Pala-o, Iligan City, Lanao del Norte 9200</div>
+            <div class="text-[11px] text-blue-400 mt-0.5">Contact: +63 917 555 2890 | iliganrealty@example.ph</div>
+          </div>
+        </div>
+
+        <!-- Discreet Realtor Portal Button (Password Protected) -->
+        <div class="flex items-center gap-3 w-full md:w-auto justify-end border-t md:border-t-0 pt-4 md:pt-0 border-slate-800">
+          <span class="text-[11px] text-slate-500 hidden sm:inline">Authorized Staff:</span>
+          <button id="toggleRealtorBtn" 
+                  onclick="MLSApp.promptRealtorLogin()" 
+                  class="px-4 py-2 bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white rounded-xl text-xs font-bold transition flex items-center gap-2 border border-slate-700/80 shadow-sm"
+                  title="Authorized Realtor & Broker Portal (Password Protected)">
+            <i class="fa-solid fa-user-tie text-blue-400"></i>
+            <span>Realtor Portal</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Copyright Footer -->
+      <div class="mt-8 text-center text-xs text-slate-400">
+        &copy; 2026 Iligan City MLS Platform. Northern Mindanao, Philippines. All Rights Reserved.
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================================== -->
+  <!-- MODAL: PROPERTY DETAIL MODAL                  -->
+  <!-- ============================================== -->
+  <div id="detailModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 sm:p-6 bg-slate-950/60 backdrop-blur-sm overflow-y-auto">
+    <div id="detailModalContent" class="w-full flex justify-center">
+      <!-- Content populated dynamically by MLSApp.openDetailModal() -->
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL: REALTOR ADD / EDIT LISTING MODAL       -->
+  <!-- ============================================== -->
+  <div id="editListingModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 sm:p-6 bg-slate-950/70 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[92vh] flex flex-col overflow-hidden animate-modal">
+      
+      <!-- Modal Top Bar -->
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-900 text-white">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-amber-500 text-white flex items-center justify-center font-bold text-sm">
+            <i class="fa-solid fa-house-chimney-medical"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white" id="editModalTitle">Edit Property Info</h3>
+            <p class="text-xs text-slate-400">Update property details, photos, price, and map pinpoint in Iligan City</p>
+          </div>
+        </div>
+        <button onclick="MLSApp.closeEditModal()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+
+      <!-- Form Container -->
+      <form id="editListingForm" class="overflow-y-auto p-6 space-y-6 flex-1 text-xs">
+        <input type="hidden" id="editListingId" value="">
+
+        <!-- Section 1: Core Property Details -->
+        <div>
+          <h4 class="text-sm font-bold text-slate-900 mb-3 flex items-center gap-1.5 pb-1 border-b border-slate-100">
+            <i class="fa-solid fa-tag text-blue-600"></i> 1. Property Overview
+          </h4>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            
+            <div class="sm:col-span-2">
+              <label class="block font-bold text-slate-700 mb-1">Property Headline / Title *</label>
+              <input type="text" id="editTitle" required placeholder="e.g. Modern Executive Villa in Pala-o" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-600 focus:outline-none">
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Property Type *</label>
+              <select id="editType" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                <option value="Single Family">Single Family Home</option>
+                <option value="Condo">Condo / Apartment</option>
+                <option value="Townhouse">Townhouse</option>
+                <option value="Villa">Luxury Villa</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Listing Category *</label>
+              <select id="editListingType" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                <option value="sale">For Sale (Buy)</option>
+                <option value="rent">For Rent (Monthly)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Price (₱ PHP) *</label>
+              <input type="number" id="editPrice" required min="1000" step="100" placeholder="e.g. 4500000 or 18000" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-600 focus:outline-none text-xs bg-white font-mono">
+              <span class="text-[10px] text-slate-400">For sale: total selling price. For rent: monthly rate.</span>
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Status</label>
+              <select id="editStatus" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-600 focus:outline-none text-xs bg-white">
+                <option value="active">Active MLS</option>
+                <option value="pending">Pending / Reservation</option>
+                <option value="sold">Sold</option>
+              </select>
+            </div>
+
+            <!-- Live Financing & Interest Estimator Widget (For Sale Properties) -->
+            <div id="realtorLoanEstimatorCard" class="sm:col-span-2 bg-gradient-to-r from-blue-50/70 via-indigo-50/50 to-slate-50 p-4 rounded-2xl border border-blue-200/70 shadow-sm mt-1">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-1.5 text-blue-900 font-bold text-xs">
+                  <i class="fa-solid fa-calculator text-blue-600"></i>
+                  <span>Live Interest & Loan Amortization Estimator</span>
+                </div>
+                <span class="text-[10px] bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded-full">Bank / Pag-IBIG</span>
+              </div>
+
+              <!-- Compact Controls Row -->
+              <div class="grid grid-cols-3 gap-2.5 mb-3 text-[11px]">
+                <div>
+                  <label class="font-semibold text-slate-600 block mb-0.5">Down Payment</label>
+                  <select id="realtorDownPercent" class="w-full px-2 py-1.5 bg-white rounded-lg border border-slate-200 text-xs font-semibold text-slate-800">
+                    <option value="10">10% Down</option>
+                    <option value="20" selected>20% Down (Standard)</option>
+                    <option value="30">30% Down</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="font-semibold text-slate-600 block mb-0.5">Annual Interest Rate</label>
+                  <input type="number" id="realtorInterestRate" value="7.0" step="0.25" min="4" max="15" class="w-full px-2 py-1.5 bg-white rounded-lg border border-slate-200 text-xs font-semibold text-slate-800 font-mono">
+                </div>
+                <div>
+                  <label class="font-semibold text-slate-600 block mb-0.5">Loan Term</label>
+                  <select id="realtorLoanTerm" class="w-full px-2 py-1.5 bg-white rounded-lg border border-slate-200 text-xs font-semibold text-slate-800">
+                    <option value="30">30 Yrs (Pag-IBIG)</option>
+                    <option value="20" selected>20 Yrs (Bank Loan)</option>
+                    <option value="15">15 Yrs (Bank Loan)</option>
+                    <option value="10">10 Yrs (Short Term)</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Results Badges -->
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
+                <div class="bg-white p-2 rounded-xl border border-blue-100 shadow-xs">
+                  <span class="text-[10px] text-slate-500 block uppercase font-medium">Down Payment</span>
+                  <strong id="realtorDownAmountReadout" class="text-slate-800 font-mono text-xs">₱0</strong>
+                </div>
+                <div class="bg-white p-2 rounded-xl border border-blue-100 shadow-xs">
+                  <span class="text-[10px] text-slate-500 block uppercase font-medium">Loanable Amount</span>
+                  <strong id="realtorLoanableReadout" class="text-blue-700 font-mono text-xs">₱0</strong>
+                </div>
+                <div class="bg-blue-600 text-white p-2 rounded-xl shadow-sm">
+                  <span class="text-[10px] text-blue-100 block uppercase font-semibold">Monthly Payment</span>
+                  <strong id="realtorMonthlyAmortReadout" class="font-mono text-xs">₱0/mo</strong>
+                </div>
+                <div class="bg-white p-2 rounded-xl border border-blue-100 shadow-xs">
+                  <span class="text-[10px] text-slate-500 block uppercase font-medium">Total Interest</span>
+                  <strong id="realtorTotalInterestReadout" class="text-amber-600 font-mono text-xs">₱0</strong>
+                </div>
+              </div>
+
+              <!-- Required Income Note -->
+              <div class="mt-2.5 pt-2 border-t border-blue-100/80 flex items-center justify-between text-[11px] text-slate-600">
+                <span>Minimum Gross Monthly Income to qualify (35% rule):</span>
+                <strong id="realtorRequiredIncomeReadout" class="text-emerald-700 font-mono font-bold">₱0/mo</strong>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Section 2: Address & Free Map Pinpoint (Iligan City) -->
+        <div>
+          <h4 class="text-sm font-bold text-slate-900 mb-3 flex items-center gap-1.5 pb-1 border-b border-slate-100">
+            <i class="fa-solid fa-map-location-dot text-blue-600"></i> 2. Location & GPS Coordinate Auto-Fill
+          </h4>
+
+          <!-- NEW: Paste GPS Coordinates Card with Auto-Fill Feature -->
+          <div class="bg-gradient-to-r from-blue-50 to-indigo-50/60 p-4 rounded-2xl border border-blue-200/80 mb-4 shadow-sm">
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="font-bold text-blue-950 flex items-center gap-1.5 text-xs">
+                <i class="fa-solid fa-satellite-dish text-blue-600 text-sm"></i> Paste GPS Coordinates (Auto-Fills Address & Location)
+              </label>
+              <span class="text-[10px] font-semibold text-blue-700 bg-blue-100/80 px-2 py-0.5 rounded-full">Reverse Geocoding</span>
+            </div>
+            <p class="text-[11px] text-slate-600 mb-2.5">
+              Paste coordinates from Google Maps, GPS device, or pins (e.g. <span class="font-mono font-semibold text-blue-800">8.2280, 124.2452</span>). It will automatically detect the street, barangay, city, and position the map pin!
+            </p>
+
+            <div class="flex flex-col sm:flex-row gap-2">
+              <div class="relative flex-1">
+                <i class="fa-solid fa-location-crosshairs absolute left-3 top-1/2 -translate-y-1/2 text-blue-500"></i>
+                <input type="text" 
+                       id="editGpsPasteInput" 
+                       placeholder="Paste GPS coords (e.g. 8.2280, 124.2452 or copy from Google Maps)" 
+                       class="w-full pl-8 pr-3 py-2 bg-white rounded-xl border border-blue-200 focus:ring-2 focus:ring-blue-600 focus:outline-none font-mono text-xs text-slate-800 shadow-inner">
+              </div>
+              <button type="button" 
+                      onclick="MLSApp.locateGpsAndAutoFillAddress()" 
+                      class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition shadow-md shadow-blue-500/20 flex items-center justify-center gap-1.5 whitespace-nowrap">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <span>Locate & Auto-Fill</span>
+              </button>
+            </div>
+
+            <!-- Quick GPS Examples in Iligan City for one-click testing -->
+            <div class="flex flex-wrap items-center gap-1.5 mt-2.5 text-[10px]">
+              <span class="text-slate-500 font-medium">Quick Presets:</span>
+              <button type="button" onclick="MLSApp.locateGpsAndAutoFillAddress('8.2245, 124.2460')" class="px-2 py-0.5 bg-white hover:bg-blue-100 text-blue-800 font-mono rounded-md border border-blue-200 transition">Pala-o (8.2245, 124.2460)</button>
+              <button type="button" onclick="MLSApp.locateGpsAndAutoFillAddress('8.2415, 124.2440')" class="px-2 py-0.5 bg-white hover:bg-blue-100 text-blue-800 font-mono rounded-md border border-blue-200 transition">Tibanga (8.2415, 124.2440)</button>
+              <button type="button" onclick="MLSApp.locateGpsAndAutoFillAddress('8.2160, 124.2385')" class="px-2 py-0.5 bg-white hover:bg-blue-100 text-blue-800 font-mono rounded-md border border-blue-200 transition">Tubod (8.2160, 124.2385)</button>
+              <button type="button" onclick="MLSApp.locateGpsAndAutoFillAddress('8.1930, 124.1950')" class="px-2 py-0.5 bg-white hover:bg-blue-100 text-blue-800 font-mono rounded-md border border-blue-200 transition">Buru-un (8.1930, 124.1950)</button>
+            </div>
+          </div>
+          
+          <!-- Clean Responsive Address Fields Grid -->
+          <div class="space-y-3 mb-4">
+            <!-- Row 1: Street / Subdivision / Barangay & City -->
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+              <div class="sm:col-span-7">
+                <label class="block font-bold text-slate-700 mb-1">
+                  <i class="fa-solid fa-road text-slate-400 mr-1"></i> Street / Subdivision / Barangay *
+                </label>
+                <input type="text" 
+                       id="editAddress" 
+                       required 
+                       placeholder="e.g. Rosal St., Villa Verde, Brgy. Pala-o" 
+                       class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-600 focus:outline-none text-xs bg-white shadow-sm">
+              </div>
+              <div class="sm:col-span-5">
+                <label class="block font-bold text-slate-700 mb-1">
+                  <i class="fa-solid fa-city text-slate-400 mr-1"></i> City / Municipality *
+                </label>
+                <input type="text" 
+                       id="editCity" 
+                       required 
+                       value="Iligan City" 
+                       placeholder="Iligan City" 
+                       class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-600 focus:outline-none text-xs bg-white shadow-sm">
+              </div>
+            </div>
+
+            <!-- Row 2: Province, Postal Code, Country -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">
+                  <i class="fa-solid fa-map text-slate-400 mr-1"></i> Province / State
+                </label>
+                <input type="text" 
+                       id="editState" 
+                       value="Lanao del Norte" 
+                       placeholder="Lanao del Norte" 
+                       class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-600 focus:outline-none text-xs bg-white shadow-sm">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">
+                  <i class="fa-solid fa-envelope text-slate-400 mr-1"></i> Postal / ZIP Code
+                </label>
+                <input type="text" 
+                       id="editZip" 
+                       value="9200" 
+                       placeholder="9200" 
+                       class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-600 focus:outline-none text-xs bg-white shadow-sm font-mono">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">
+                  <i class="fa-solid fa-flag text-slate-400 mr-1"></i> Country
+                </label>
+                <input type="text" 
+                       readonly 
+                       value="Philippines" 
+                       class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-600">
+              </div>
+            </div>
+          </div>
+
+          <!-- Geocoding / Pin Action Bar -->
+          <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-2.5 mb-3">
+            <div class="flex items-center gap-2 text-slate-600">
+              <div class="w-7 h-7 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-xs">
+                <i class="fa-solid fa-map-pin"></i>
+              </div>
+              <span class="text-[11px] font-semibold text-slate-700">Drag or click on the map to pinpoint exact location:</span>
+            </div>
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+              <button type="button" 
+                      onclick="MLSApp.autoFillAddressFromPin()" 
+                      class="flex-1 sm:flex-none px-3 py-2 bg-white hover:bg-blue-50 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition shadow-sm flex items-center justify-center gap-1.5" 
+                      title="Read GPS from current pin and auto-fill address fields">
+                <i class="fa-solid fa-arrow-up-from-bracket text-blue-600"></i>
+                <span>Fill Address from Pin</span>
+              </button>
+              <button type="button" 
+                      onclick="MLSApp.searchAddressOnMap()" 
+                      class="flex-1 sm:flex-none px-3.5 py-2 bg-slate-900 hover:bg-blue-600 text-white rounded-xl text-xs font-bold transition shadow-sm flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-crosshairs text-blue-400"></i>
+                <span>Search Address on Map</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Interactive Leaflet Pinpicker Map -->
+          <div class="rounded-2xl overflow-hidden border border-slate-200 shadow-inner mb-3">
+            <div id="realtorMapPicker"></div>
+          </div>
+
+          <!-- Coordinates Readout -->
+          <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200/60">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 mb-0.5">Latitude (GPS)</label>
+              <input type="text" id="editLat" readonly class="w-full px-2.5 py-1.5 bg-white rounded-lg border border-slate-200 font-mono text-xs">
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 mb-0.5">Longitude (GPS)</label>
+              <input type="text" id="editLng" readonly class="w-full px-2.5 py-1.5 bg-white rounded-lg border border-slate-200 font-mono text-xs">
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Specifications (in SQM) -->
+        <div>
+          <h4 class="text-sm font-bold text-slate-900 mb-3 flex items-center gap-1.5 pb-1 border-b border-slate-100">
+            <i class="fa-solid fa-ruler-combined text-blue-600"></i> 3. Specifications & Areas
+          </h4>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Bedrooms</label>
+              <input type="number" id="editBeds" min="0" max="20" value="3" class="w-full px-3 py-2 rounded-xl border border-slate-200">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Bathrooms</label>
+              <input type="number" id="editBaths" min="0" max="20" step="0.5" value="2" class="w-full px-3 py-2 rounded-xl border border-slate-200">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Floor Area (sqm)</label>
+              <input type="number" id="editSqft" min="10" step="1" value="180" class="w-full px-3 py-2 rounded-xl border border-slate-200">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Lot Area (e.g. 250 sqm)</label>
+              <input type="text" id="editLotSize" value="250 sqm" class="w-full px-3 py-2 rounded-xl border border-slate-200">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Year Built</label>
+              <input type="number" id="editYearBuilt" value="2023" class="w-full px-3 py-2 rounded-xl border border-slate-200">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">HOA / Dues (₱/mo)</label>
+              <input type="number" id="editHoa" value="500" class="w-full px-3 py-2 rounded-xl border border-slate-200">
+            </div>
+          </div>
+          <div class="mt-3">
+            <label class="inline-flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="editFeatured" class="w-4 h-4 text-blue-600 rounded">
+              <span class="font-bold text-slate-700">Mark as Featured Property (Highlights card with gold badge)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Section 4: Photo Gallery & Uploads -->
+        <div>
+          <h4 class="text-sm font-bold text-slate-900 mb-3 flex items-center gap-1.5 pb-1 border-b border-slate-100">
+            <i class="fa-solid fa-camera text-blue-600"></i> 4. Property Photos & Media
+          </h4>
+
+          <div id="editorImagesList" class="flex gap-2 overflow-x-auto p-2 bg-slate-50 rounded-2xl border border-slate-200/60 mb-3 min-h-[90px] items-center"></div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-200/80">
+              <label class="block font-bold text-slate-700 mb-1">Add by Image URL</label>
+              <div class="flex gap-2">
+                <input type="url" id="newImageUrl" placeholder="https://..." class="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 bg-white">
+                <button type="button" onclick="MLSApp.addImageByUrl()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold">Add</button>
+              </div>
+            </div>
+
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-200/80">
+              <label class="block font-bold text-slate-700 mb-1">Upload Photo from Computer</label>
+              <input type="file" id="editImageFiles" accept="image/*" multiple class="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Section 5: Features & Amenities Checklist -->
+        <div>
+          <h4 class="text-sm font-bold text-slate-900 mb-3 flex items-center gap-1.5 pb-1 border-b border-slate-100">
+            <i class="fa-solid fa-list-check text-blue-600"></i> 5. Features & Amenities
+          </h4>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100 cursor-pointer hover:bg-slate-100">
+              <input type="checkbox" value="Gated Subdivision" class="edit-amenity-checkbox rounded text-blue-600">
+              <span>Gated Subdivision</span>
+            </label>
+            <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100 cursor-pointer hover:bg-slate-100">
+              <input type="checkbox" value="24/7 Security" class="edit-amenity-checkbox rounded text-blue-600">
+              <span>24/7 Security Guard</span>
+            </label>
+            <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100 cursor-pointer hover:bg-slate-100">
+              <input type="checkbox" value="Clean Title (TCT)" class="edit-amenity-checkbox rounded text-blue-600">
+              <span>Clean Title (TCT)</span>
+            </label>
+            <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100 cursor-pointer hover:bg-slate-100">
+              <input type="checkbox" value="Pag-IBIG Eligible" class="edit-amenity-checkbox rounded text-blue-600">
+              <span>Pag-IBIG Loan Eligible</span>
+            </label>
+            <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100 cursor-pointer hover:bg-slate-100">
+              <input type="checkbox" value="2-Car Garage" class="edit-amenity-checkbox rounded text-blue-600">
+              <span>Garage / Carport</span>
+            </label>
+            <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100 cursor-pointer hover:bg-slate-100">
+              <input type="checkbox" value="Water Tank" class="edit-amenity-checkbox rounded text-blue-600">
+              <span>Water Tank / Cistern</span>
+            </label>
+            <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100 cursor-pointer hover:bg-slate-100">
+              <input type="checkbox" value="Balcony" class="edit-amenity-checkbox rounded text-blue-600">
+              <span>Balcony / Lanai</span>
+            </label>
+            <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100 cursor-pointer hover:bg-slate-100">
+              <input type="checkbox" value="Pet Friendly" class="edit-amenity-checkbox rounded text-blue-600">
+              <span>Pet Friendly</span>
+            </label>
+            <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100 cursor-pointer hover:bg-slate-100">
+              <input type="checkbox" value="Mountain View" class="edit-amenity-checkbox rounded text-blue-600">
+              <span>Mountain / Sea View</span>
+            </label>
+            <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100 cursor-pointer hover:bg-slate-100">
+              <input type="checkbox" value="Solar Panels" class="edit-amenity-checkbox rounded text-blue-600">
+              <span>Solar Powered</span>
+            </label>
+            <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100 cursor-pointer hover:bg-slate-100">
+              <input type="checkbox" value="Near Universities" class="edit-amenity-checkbox rounded text-blue-600">
+              <span>Near Schools / MSU-IIT</span>
+            </label>
+            <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100 cursor-pointer hover:bg-slate-100">
+              <input type="checkbox" value="CCTV System" class="edit-amenity-checkbox rounded text-blue-600">
+              <span>CCTV Security</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Section 6: Description -->
+        <div>
+          <h4 class="text-sm font-bold text-slate-900 mb-2 flex items-center gap-1.5 pb-1 border-b border-slate-100">
+            <i class="fa-solid fa-align-left text-blue-600"></i> 6. Property Description
+          </h4>
+          <textarea id="editDescription" rows="4" placeholder="Highlight key selling points, subdivision amenities, accessibility to national highway, water supply, and landmarks in Iligan City..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-600 focus:outline-none"></textarea>
+        </div>
+
+        <!-- Form Submit Bar -->
+        <div class="sticky bottom-0 bg-white/95 backdrop-blur pt-3 pb-1 border-t border-slate-100 flex items-center justify-end gap-3 z-10">
+          <button type="button" onclick="MLSApp.closeEditModal()" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition">
+            Cancel
+          </button>
+          <button type="submit" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/25 transition flex items-center gap-2">
+            <i class="fa-solid fa-cloud-arrow-up"></i> Save Property to MLS
+          </button>
+        </div>
+
+      </form>
+
+    </div>
+  </div>
+
+  <!-- ==================================================== -->
+  <!-- MODAL: PHILIPPINE HOME LOAN & INTEREST ESTIMATOR     -->
+  <!-- ==================================================== -->
+  <div id="loanCalculatorModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 sm:p-6 bg-slate-950/75 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[94vh] flex flex-col overflow-hidden animate-modal">
+      
+      <!-- Modal Header -->
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-900 text-white">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-md">
+            <i class="fa-solid fa-calculator"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white">Philippine Home Loan & Interest Estimator</h3>
+            <p class="text-xs text-slate-400">Calculate monthly amortizations, interest costs & income qualifications in Iligan City</p>
+          </div>
+        </div>
+        <button onclick="MLSApp.closeCalculatorModal()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="overflow-y-auto p-6 space-y-6 flex-1 text-xs">
+        
+        <!-- Controls Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          
+          <!-- Column 1: Price, Presets & Down Payment -->
+          <div class="space-y-4">
+            
+            <!-- Property Price -->
+            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
+              <label class="block font-bold text-slate-700 mb-1">Property Selling Price (₱ PHP)</label>
+              <div class="relative">
+                <span class="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-sm">₱</span>
+                <input type="number" 
+                       id="calcModalPrice" 
+                       value="4500000" 
+                       step="50000" 
+                       min="100000" 
+                       class="w-full pl-8 pr-3 py-2.5 bg-white rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-600 font-mono font-bold text-base text-slate-900 shadow-inner">
+              </div>
+
+              <!-- Quick Price Presets -->
+              <div class="flex flex-wrap gap-1.5 mt-2">
+                <span class="text-[10px] text-slate-400 font-semibold self-center">Presets:</span>
+                <button type="button" onclick="document.getElementById('calcModalPrice').value=2500000; MLSApp.recalculateStandaloneLoan();" class="px-2 py-0.5 bg-white hover:bg-blue-50 text-blue-700 rounded-md border border-slate-200 font-mono text-[10px] font-semibold">₱2.5M</button>
+                <button type="button" onclick="document.getElementById('calcModalPrice').value=4500000; MLSApp.recalculateStandaloneLoan();" class="px-2 py-0.5 bg-white hover:bg-blue-50 text-blue-700 rounded-md border border-slate-200 font-mono text-[10px] font-semibold">₱4.5M</button>
+                <button type="button" onclick="document.getElementById('calcModalPrice').value=8500000; MLSApp.recalculateStandaloneLoan();" class="px-2 py-0.5 bg-white hover:bg-blue-50 text-blue-700 rounded-md border border-slate-200 font-mono text-[10px] font-semibold">₱8.5M</button>
+                <button type="button" onclick="document.getElementById('calcModalPrice').value=14500000; MLSApp.recalculateStandaloneLoan();" class="px-2 py-0.5 bg-white hover:bg-blue-50 text-blue-700 rounded-md border border-slate-200 font-mono text-[10px] font-semibold">₱14.5M</button>
+              </div>
+            </div>
+
+            <!-- Down Payment Slider -->
+            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
+              <div class="flex items-center justify-between mb-1.5">
+                <label class="font-bold text-slate-700">Down Payment Ratio</label>
+                <div class="text-right">
+                  <span id="calcModalDownPercentDisplay" class="font-bold text-blue-600 font-mono">20%</span>
+                  <span class="text-slate-400 text-[10px] ml-1">(<strong id="calcModalDownAmountDisplay" class="font-mono text-slate-700">₱900,000</strong>)</span>
+                </div>
+              </div>
+              <input type="range" id="calcModalDownPercent" min="5" max="50" step="5" value="20" class="w-full accent-blue-600 cursor-pointer">
+              <div class="flex justify-between text-[10px] text-slate-400 font-mono mt-1">
+                <span>5% (Minimal)</span>
+                <span>20% (Standard Bank)</span>
+                <span>50%</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Column 2: Loan Term & Interest Rate -->
+          <div class="space-y-4">
+            
+            <!-- Loan Term Slider -->
+            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
+              <div class="flex items-center justify-between mb-1.5">
+                <label class="font-bold text-slate-700">Loan Tenure (Years)</label>
+                <span id="calcModalYearsDisplay" class="font-bold text-blue-600 font-mono">20 Years (240 mos)</span>
+              </div>
+              <input type="range" id="calcModalYears" min="5" max="30" step="5" value="20" class="w-full accent-blue-600 cursor-pointer">
+              
+              <!-- Quick Program Presets -->
+              <div class="flex flex-wrap gap-1.5 mt-2">
+                <button type="button" onclick="MLSApp.applyLoanPreset(30, 6.25)" class="px-2 py-1 bg-white hover:bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-200 text-[10px] font-bold">
+                  Pag-IBIG 30 Yrs @ 6.25%
+                </button>
+                <button type="button" onclick="MLSApp.applyLoanPreset(20, 7.0)" class="px-2 py-1 bg-white hover:bg-blue-50 text-blue-700 rounded-lg border border-blue-200 text-[10px] font-bold">
+                  Bank 20 Yrs @ 7%
+                </button>
+                <button type="button" onclick="MLSApp.applyLoanPreset(15, 6.75)" class="px-2 py-1 bg-white hover:bg-blue-50 text-blue-700 rounded-lg border border-blue-200 text-[10px] font-bold">
+                  Bank 15 Yrs @ 6.75%
+                </button>
+              </div>
+            </div>
+
+            <!-- Interest Rate Slider -->
+            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
+              <div class="flex items-center justify-between mb-1.5">
+                <label class="font-bold text-slate-700">Annual Interest Rate (% p.a.)</label>
+                <span id="calcModalRateDisplay" class="font-bold text-blue-600 font-mono">7.0% p.a.</span>
+              </div>
+              <input type="range" id="calcModalRate" min="4.5" max="14.0" step="0.25" value="7.0" class="w-full accent-blue-600 cursor-pointer">
+              <div class="flex justify-between text-[10px] text-slate-400 font-mono mt-1">
+                <span>4.5% (Subsidized)</span>
+                <span>7.0% (Average PH Bank)</span>
+                <span>14.0%</span>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Real-Time Calculation Highlights -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          
+          <!-- Card 1: Monthly Amortization -->
+          <div class="bg-gradient-to-br from-blue-600 to-indigo-700 text-white p-5 rounded-2xl shadow-lg shadow-blue-500/20 flex flex-col justify-between">
+            <span class="text-xs font-semibold text-blue-100 uppercase tracking-wider">Est. Monthly Amortization</span>
+            <div class="my-2">
+              <div class="text-3xl font-black tracking-tight" id="calcResultMonthly">₱0</div>
+              <span class="text-[11px] text-blue-200 font-normal">per month</span>
+            </div>
+            <div class="pt-2 border-t border-blue-500/40 text-[11px] text-blue-100">
+              Principal + Interest
+            </div>
+          </div>
+
+          <!-- Card 2: Required Income -->
+          <div class="bg-slate-900 text-white p-5 rounded-2xl shadow-sm flex flex-col justify-between">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Required Monthly Income</span>
+            <div class="my-2">
+              <div class="text-2xl font-black text-emerald-400 font-mono" id="calcResultIncome">₱0/mo</div>
+              <span class="text-[11px] text-slate-400">Combined Gross Household</span>
+            </div>
+            <div class="pt-2 border-t border-slate-800 text-[11px] text-slate-400">
+              Based on Philippine 35% DTI rule
+            </div>
+          </div>
+
+          <!-- Card 3: Total Interest Cost -->
+          <div class="bg-amber-50/80 border border-amber-200 text-slate-900 p-5 rounded-2xl shadow-sm flex flex-col justify-between">
+            <span class="text-xs font-semibold text-amber-800 uppercase tracking-wider">Total Interest Over Loan</span>
+            <div class="my-2">
+              <div class="text-2xl font-black text-amber-600 font-mono" id="calcResultInterest">₱0</div>
+              <span class="text-[11px] text-slate-500">Finance Charge</span>
+            </div>
+            <div class="pt-2 border-t border-amber-200 text-[11px] text-slate-600 flex justify-between">
+              <span>Total Payment:</span>
+              <strong id="calcResultTotalPayment" class="font-mono text-slate-900">₱0</strong>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Visual Proportion Bar (Principal vs Interest) -->
+        <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+          <div class="flex items-center justify-between text-[11px] font-bold text-slate-700 mb-2">
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-blue-600"></span> Loan Principal: <strong id="calcResultPrincipal" class="font-mono text-blue-700">₱0</strong></span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-amber-500"></span> Total Interest Paid</span>
+          </div>
+          <div class="w-full h-3.5 bg-slate-200 rounded-full overflow-hidden flex shadow-inner">
+            <div id="calcBarPrincipal" class="bg-blue-600 h-full transition-all duration-300" style="width: 50%"></div>
+            <div id="calcBarInterest" class="bg-amber-500 h-full transition-all duration-300" style="width: 50%"></div>
+          </div>
+        </div>
+
+        <!-- Term Comparison Matrix -->
+        <div>
+          <h4 class="font-bold text-slate-800 text-sm mb-2 flex items-center gap-1.5">
+            <i class="fa-solid fa-table-list text-blue-600"></i> Compare Financing Terms for this Property
+          </h4>
+          <div class="rounded-2xl overflow-hidden border border-slate-200">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-100 text-slate-600 uppercase font-semibold text-[10px]">
+                <tr>
+                  <th class="py-2.5 px-3">Financing Option</th>
+                  <th class="py-2.5 px-3 text-right">Interest Rate</th>
+                  <th class="py-2.5 px-3 text-right">Monthly Amort.</th>
+                  <th class="py-2.5 px-3 text-right">Total Interest</th>
+                  <th class="py-2.5 px-3 text-right">Req. Income</th>
+                </tr>
+              </thead>
+              <tbody id="calcComparisonTableBody" class="divide-y divide-slate-100 font-normal">
+                <!-- Populated via MLSApp.recalculateStandaloneLoan() -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-6 py-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+        <span class="text-[11px] text-slate-500">
+          * Estimates exclude insurance & documentary stamp tax. Subject to bank credit evaluation.
+        </span>
+        <button onclick="MLSApp.closeCalculatorModal()" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition">
+          Close Calculator
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL: SCHEDULE SITE VIEWING / INQUIRY         -->
+  <!-- ============================================== -->
+  <div id="tourModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 sm:p-6 bg-slate-950/70 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-modal">
+      <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+        <div>
+          <h3 class="text-base font-bold">Schedule Site Viewing</h3>
+          <p class="text-xs text-slate-400" id="tourListingTitle">Property Inquiry</p>
+        </div>
+        <button onclick="MLSApp.closeTourModal()" class="w-8 h-8 rounded-full bg-slate-800 text-slate-300 hover:bg-slate-700 flex items-center justify-center">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+      <form id="tourForm" class="p-6 space-y-4 text-xs">
+        <input type="hidden" id="tourListingId" value="">
+        <p class="text-slate-500" id="tourListingAddress"></p>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Full Name *</label>
+          <input type="text" id="tourName" required placeholder="Juan Dela Cruz" class="w-full px-3.5 py-2 rounded-xl border border-slate-200">
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Email Address *</label>
+          <input type="email" id="tourEmail" required placeholder="juan@example.ph" class="w-full px-3.5 py-2 rounded-xl border border-slate-200">
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Mobile / Contact Number *</label>
+          <input type="tel" id="tourPhone" required placeholder="+63 917 000 0000" class="w-full px-3.5 py-2 rounded-xl border border-slate-200">
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Preferred Viewing Date & Time</label>
+          <input type="datetime-local" id="tourDate" class="w-full px-3.5 py-2 rounded-xl border border-slate-200">
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Message / Financing Preference</label>
+          <textarea rows="2" placeholder="Interested in spot cash / Pag-IBIG / bank financing. Inquiring for viewing schedule..." class="w-full px-3.5 py-2 rounded-xl border border-slate-200"></textarea>
+        </div>
+        <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition shadow-lg shadow-blue-500/25">
+          Submit Viewing Inquiry
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL: REALTOR ADMIN VERIFICATION / PASSCODE   -->
+  <!-- ============================================== -->
+  <div id="adminAuthModal" 
+       style="z-index: 9999;" 
+       class="fixed inset-0 hidden items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-sm overflow-y-auto" 
+       onclick="if(event.target === this) MLSApp.closeAdminAuthModal()">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-modal border border-slate-100 relative z-10">
+      
+      <!-- Header -->
+      <div class="px-6 py-5 bg-slate-900 text-white flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center text-base">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white">Realtor Portal Verification</h3>
+            <p class="text-xs text-slate-400">Restricted to authorized administrator</p>
+          </div>
+        </div>
+        <button type="button" onclick="MLSApp.closeAdminAuthModal()" class="w-8 h-8 rounded-full bg-slate-800 text-slate-300 hover:bg-slate-700 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+
+      <!-- Form -->
+      <form id="adminAuthForm" onsubmit="MLSApp.handleAdminLogin(event)" class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1.5">
+            <i class="fa-solid fa-key text-slate-400 mr-1"></i> Admin Passcode
+          </label>
+          <div class="relative">
+            <input type="password" 
+                   id="adminPasswordInput" 
+                   required 
+                   autocomplete="current-password"
+                   placeholder="Enter realtor passcode" 
+                   class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-600 focus:outline-none text-sm transition pr-10 font-mono">
+            <button type="button" 
+                    onclick="MLSApp.togglePasswordVisibility()" 
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 text-sm">
+              <i id="passwordEyeIcon" class="fa-regular fa-eye"></i>
+            </button>
+          </div>
+          <p id="adminAuthError" class="hidden mt-2 text-xs font-semibold text-rose-600 items-center gap-1.5">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <span>Incorrect passcode. Access is restricted.</span>
+          </p>
+        </div>
+
+        <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-100 text-[11px] text-slate-500 leading-relaxed flex items-start gap-2.5">
+          <i class="fa-solid fa-circle-info text-blue-500 mt-0.5 text-xs"></i>
+          <span>This portal allows the managing realtor to create, edit, or delete listings, upload photos, and update GPS coordinates.</span>
+        </div>
+
+        <div class="flex items-center justify-end gap-2.5 pt-2">
+          <button type="button" 
+                  onclick="MLSApp.closeAdminAuthModal()" 
+                  class="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs transition">
+            Cancel
+          </button>
+          <button type="submit" 
+                  class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition shadow-md shadow-blue-500/20 flex items-center gap-2">
+            <i class="fa-solid fa-lock-open"></i>
+            <span>Unlock Realtor Portal</span>
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- LEAFLET JS FREE MAP API -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- APPLICATION SCRIPTS -->
+  <script src="js/data.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
