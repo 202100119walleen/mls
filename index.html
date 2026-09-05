@@ -132,8 +132,8 @@
           <i class="fa-solid fa-plus"></i> New Property
         </button>
 
-        <button onclick="MLSApp.resetDemoData()" title="Restore original houses" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-lg transition flex items-center gap-1">
-          <i class="fa-solid fa-rotate-left"></i> Reset Demo
+        <button onclick="MLSApp.clearAllData()" title="Permanently delete all listings from Firestore and local cache" class="px-2.5 py-1.5 bg-rose-950/80 hover:bg-rose-700 text-rose-300 hover:text-white font-semibold rounded-lg transition flex items-center gap-1.5 border border-rose-800/80 shadow-sm">
+          <i class="fa-solid fa-trash-can text-[11px]"></i> Clear Database
         </button>
 
         <button onclick="MLSApp.lockRealtorMode()" title="Lock Realtor Portal and Exit" class="px-2.5 py-1.5 bg-rose-950/80 hover:bg-rose-700 text-rose-300 hover:text-white font-semibold rounded-lg transition flex items-center gap-1.5 border border-rose-800/80 shadow-sm">
@@ -362,9 +362,9 @@
             <i class="fa-solid fa-landmark"></i>
           </div>
           <div>
-            <div class="text-sm font-bold text-white">Iligan Premier Realty & Associates</div>
-            <div class="text-xs text-slate-400">Main Office: Villa Verde, Brgy. Pala-o, Iligan City, Lanao del Norte 9200</div>
-            <div class="text-[11px] text-blue-400 mt-0.5">Contact: +63 917 555 2890 | iliganrealty@example.ph</div>
+            <div class="text-sm font-bold text-white">Iligan City MLS & Realty Services</div>
+            <div class="text-xs text-slate-400">Serving all Barangays across Iligan City, Lanao del Norte 9200, Philippines</div>
+            <div class="text-[11px] text-blue-400 mt-0.5">Live Cloud Firestore Real Estate Network</div>
           </div>
         </div>
 
@@ -810,6 +810,35 @@
             <i class="fa-solid fa-align-left text-blue-600"></i> 6. Property Description
           </h4>
           <textarea id="editDescription" rows="4" placeholder="Highlight key selling points, subdivision amenities, accessibility to national highway, water supply, and landmarks in Iligan City..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-600 focus:outline-none"></textarea>
+        </div>
+
+        <!-- Section 7: Listing Agent & Brokerage Details -->
+        <div>
+          <h4 class="text-sm font-bold text-slate-900 mb-3 flex items-center gap-1.5 pb-1 border-b border-slate-100">
+            <i class="fa-solid fa-id-card-clip text-blue-600"></i> 7. Realtor / Broker Contact Info
+          </h4>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Agent / Realtor Name</label>
+              <input type="text" id="editRealtorName" placeholder="e.g. Engr. Alex Vance, REB" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Agency / Realty Firm</label>
+              <input type="text" id="editRealtorAgency" placeholder="e.g. Iligan Premier Realty & Associates" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Phone / Mobile</label>
+              <input type="text" id="editRealtorPhone" placeholder="e.g. +63 917 555 2890" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Email Address</label>
+              <input type="email" id="editRealtorEmail" placeholder="e.g. alex.vance@iliganrealty.ph" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs">
+            </div>
+            <div class="sm:col-span-2">
+              <label class="block font-bold text-slate-700 mb-1">PRC License / DHSUD Registration</label>
+              <input type="text" id="editRealtorPrc" placeholder="e.g. PRC Lic. 0031892 / DHSUD Reg. 10-2024" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs">
+            </div>
+          </div>
         </div>
 
         <!-- Form Submit Bar -->

@@ -185,11 +185,36 @@ const MLSApp = (function() {
     const container = document.getElementById('propertyGrid');
     if (!container) return;
 
+    // 1. Database has zero listings (clean start)
+    if (listings.length === 0) {
+      container.innerHTML = `
+        <div class="col-span-full py-16 text-center bg-white rounded-3xl border border-slate-200 p-8 sm:p-12 shadow-sm">
+          <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl shadow-inner">
+            <i class="fa-solid fa-house-chimney-medical"></i>
+          </div>
+          <h3 class="text-xl font-extrabold text-slate-900 mb-2">No Properties in Database Yet</h3>
+          <p class="text-sm text-slate-500 max-w-md mx-auto mb-6 leading-relaxed">
+            All static and sample data have been deleted. Your Iligan City MLS is connected to Firebase Cloud Firestore and ready to publish your real properties!
+          </p>
+          <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <button onclick="MLSApp.openAddModal()" class="w-full sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2">
+              <i class="fa-solid fa-plus"></i> Add First Property
+            </button>
+            <button onclick="MLSApp.promptRealtorLogin()" class="w-full sm:w-auto px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-user-tie text-blue-600"></i> Open Realtor Portal
+            </button>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    // 2. Filter criteria matched zero properties
     if (filteredListings.length === 0) {
       container.innerHTML = `
         <div class="col-span-full py-16 text-center bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
           <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
-            <i class="fa-solid fa-house-chimney-crack"></i>
+            <i class="fa-solid fa-filter-circle-xmark"></i>
           </div>
           <h3 class="text-lg font-bold text-slate-800 mb-1">No matching properties found</h3>
           <p class="text-sm text-slate-500 max-w-md mx-auto mb-5">
@@ -1025,15 +1050,20 @@ const MLSApp = (function() {
     }
 
     editingId = null;
-    editorImages = [
-      'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80'
-    ];
+    editorImages = [];
     editorLat = MapModule.ILIGAN_DEFAULT_LAT;
     editorLng = MapModule.ILIGAN_DEFAULT_LNG;
 
     document.getElementById('editModalTitle').innerText = 'Add New Property in Iligan City';
     document.getElementById('editListingForm').reset();
     document.getElementById('editListingId').value = '';
+    
+    // Reset realtor fields
+    if (document.getElementById('editRealtorName')) document.getElementById('editRealtorName').value = '';
+    if (document.getElementById('editRealtorAgency')) document.getElementById('editRealtorAgency').value = '';
+    if (document.getElementById('editRealtorPhone')) document.getElementById('editRealtorPhone').value = '';
+    if (document.getElementById('editRealtorEmail')) document.getElementById('editRealtorEmail').value = '';
+    if (document.getElementById('editRealtorPrc')) document.getElementById('editRealtorPrc').value = '';
     
     // Set default Iligan City values
     document.getElementById('editCity').value = 'Iligan City';
@@ -1099,6 +1129,14 @@ const MLSApp = (function() {
     document.getElementById('editHoa').value = listing.hoa || 0;
     document.getElementById('editFeatured').checked = !!listing.featured;
     document.getElementById('editDescription').value = listing.description || '';
+
+    // Realtor contact fields
+    const rInfo = listing.realtor || {};
+    if (document.getElementById('editRealtorName')) document.getElementById('editRealtorName').value = rInfo.name || '';
+    if (document.getElementById('editRealtorAgency')) document.getElementById('editRealtorAgency').value = rInfo.agency || '';
+    if (document.getElementById('editRealtorPhone')) document.getElementById('editRealtorPhone').value = rInfo.phone || '';
+    if (document.getElementById('editRealtorEmail')) document.getElementById('editRealtorEmail').value = rInfo.email || '';
+    if (document.getElementById('editRealtorPrc')) document.getElementById('editRealtorPrc').value = rInfo.prcNo || '';
 
     // Amenities checkboxes
     document.querySelectorAll('.edit-amenity-checkbox').forEach(chk => {
@@ -1362,11 +1400,11 @@ const MLSApp = (function() {
       amenities,
       images: editorImages,
       realtor: {
-        name: 'Engr. Alex Vance, REB',
-        agency: 'Iligan Premier Realty & Associates',
-        phone: '+63 917 555 2890',
-        email: 'alex.vance@iliganrealty.ph',
-        prcNo: 'PRC Lic. 0031892 / DHSUD Reg. 10-2024',
+        name: document.getElementById('editRealtorName')?.value.trim() || 'Licensed Broker / Agent',
+        agency: document.getElementById('editRealtorAgency')?.value.trim() || 'Iligan Premier Realty Services',
+        phone: document.getElementById('editRealtorPhone')?.value.trim() || '+63 917 555 2890',
+        email: document.getElementById('editRealtorEmail')?.value.trim() || 'realtor@iliganmls.ph',
+        prcNo: document.getElementById('editRealtorPrc')?.value.trim() || 'PRC / DHSUD Registered',
         avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=256&q=80'
       }
     };
@@ -1396,19 +1434,23 @@ const MLSApp = (function() {
     }
   }
 
-  function resetDemoData() {
+  async function clearAllData() {
     if (!isRealtorAuthenticated) {
       promptRealtorLogin();
-      showToast('Realtor passcode required to reset data.', 'warning');
+      showToast('Realtor passcode required to clear data.', 'warning');
       return;
     }
-    if (confirm('Reset all listings to initial Iligan City properties?')) {
-      MLSStore.resetToDefaults();
+    if (confirm('Are you sure you want to permanently delete ALL properties from Firestore and LocalStorage? This action cannot be undone.')) {
+      await MLSStore.clearAllListings();
       loadData();
       applyFilters();
       updateRealtorStats();
-      showToast('Listings reset to default Iligan City sample data', 'info');
+      showToast('All property listings permanently cleared from database.', 'info');
     }
+  }
+
+  function resetDemoData() {
+    return clearAllData();
   }
 
   // Site Viewing Inquiry Modal
@@ -1722,7 +1764,7 @@ const MLSApp = (function() {
     // Subscribe to real-time Cloud Firestore updates
     if (typeof FirebaseModule !== 'undefined' && FirebaseModule.subscribeToListings) {
       FirebaseModule.subscribeToListings((cloudListings) => {
-        if (Array.isArray(cloudListings) && cloudListings.length > 0) {
+        if (Array.isArray(cloudListings)) {
           listings = cloudListings;
           MLSStore.saveAllListings(cloudListings);
           applyFilters();
@@ -1750,6 +1792,7 @@ const MLSApp = (function() {
     openEditModal,
     closeEditModal,
     confirmDeleteListing,
+    clearAllData,
     resetDemoData,
     searchAddressOnMap,
     locateGpsAndAutoFillAddress,

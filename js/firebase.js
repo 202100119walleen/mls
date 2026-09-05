@@ -2,6 +2,7 @@
  * Firebase Initialization & Cloud Firestore Database Integration
  * Project: jobacsmls
  * Real-time synchronization for property listings & viewing inquiries
+ * All static mock data removed; pure live database mode.
  */
 
 const FirebaseModule = (function() {
@@ -20,8 +21,13 @@ const FirebaseModule = (function() {
   let db = null;
   let analytics = null;
   let isConnected = false;
-  let isSeeding = false;
   let unsubscribeListings = null;
+
+  // Known legacy mock IDs to auto-purge from Firestore if previously seeded
+  const LEGACY_STATIC_IDS = new Set([
+    'ILG-2001', 'ILG-2002', 'ILG-2003', 'ILG-2004',
+    'ILG-2005', 'ILG-2006', 'ILG-2007', 'ILG-2008'
+  ]);
 
   // Initialize Firebase
   function init() {
@@ -33,7 +39,7 @@ const FirebaseModule = (function() {
         try {
           analytics = firebase.analytics();
         } catch (e) {
-          console.warn('[Firebase] Analytics initialized or optional:', e.message);
+          console.warn('[Firebase] Analytics optional:', e.message);
         }
 
         console.log('[Firebase] Initialized successfully with project:', firebaseConfig.projectId);
@@ -64,7 +70,7 @@ const FirebaseModule = (function() {
       if (status === 'connected') {
         badge.className = 'firebase-status-badge cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition';
         badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Firebase Cloud Sync Active';
-        badge.title = 'Connected to Cloud Firestore (jobacsmls). Realtime sync enabled. Click to test sync.';
+        badge.title = 'Connected to Cloud Firestore (jobacsmls). Real-time sync active. Click to test sync.';
       } else if (status === 'connecting') {
         badge.className = 'firebase-status-badge cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition';
         badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping"></span> Connecting Firebase...';
@@ -92,7 +98,7 @@ const FirebaseModule = (function() {
       const snapshot = await db.collection('listings').limit(1).get();
       isConnected = true;
       updateStatusBadge('connected');
-      console.log('[Firebase Firestore] Connected successfully! Document count check ok.');
+      console.log('[Firebase Firestore] Connected successfully!');
       if (notifyOnSuccess && typeof MLSApp !== 'undefined' && MLSApp.showToast) {
         MLSApp.showToast('Connected to Firebase Cloud Firestore! Cloud synchronization active.', 'success');
       }
@@ -101,10 +107,10 @@ const FirebaseModule = (function() {
       console.warn('[Firebase Firestore] Connection check notice:', err.message);
       let userFriendlyMsg = err.message;
       if (err.code === 'permission-denied') {
-        userFriendlyMsg = 'Security rules restricted. If you just published rules, refresh your browser tab!';
+        userFriendlyMsg = 'Security rules restricted. Please allow read/write in Firebase Console.';
         updateStatusBadge('error', userFriendlyMsg);
       } else if (err.message && err.message.includes('does not exist')) {
-        userFriendlyMsg = 'Firestore Database needs to be created in Firebase Console (Build > Firestore Database > Create Database).';
+        userFriendlyMsg = 'Firestore Database needs to be created in Firebase Console (Build > Firestore Database).';
         updateStatusBadge('error', userFriendlyMsg);
       } else {
         updateStatusBadge('offline', userFriendlyMsg);
@@ -141,18 +147,40 @@ const FirebaseModule = (function() {
         isConnected = true;
         updateStatusBadge('connected');
 
-        if (snapshot.empty && !isSeeding) {
-          console.log('[Firebase Firestore] Listings collection is empty. Seeding initial Iligan sample properties...');
-          seedInitialListings();
+        if (snapshot.empty) {
+          console.log('[Firebase Firestore] Listings collection is empty. Ready for new entries.');
+          if (typeof onUpdate === 'function') {
+            onUpdate([]);
+          }
           return;
         }
 
         const cloudListings = [];
+        const staticDocsToDelete = [];
+
         snapshot.forEach(doc => {
-          cloudListings.push(doc.data());
+          const data = doc.data();
+          const docId = data.id || doc.id;
+          // Detect any legacy static dummy listings and schedule for cleanup
+          if (LEGACY_STATIC_IDS.has(docId)) {
+            staticDocsToDelete.push(doc.ref);
+          } else {
+            cloudListings.push(data);
+          }
         });
 
-        console.log(`[Firebase Firestore] Received ${cloudListings.length} listings in real-time.`);
+        // Clean out legacy mock listings if any exist in Firestore
+        if (staticDocsToDelete.length > 0) {
+          const batch = db.batch();
+          staticDocsToDelete.forEach(ref => batch.delete(ref));
+          batch.commit().then(() => {
+            console.log(`[Firebase Firestore] Purged ${staticDocsToDelete.length} legacy static dummy listings from cloud database.`);
+          }).catch(err => {
+            console.warn('[Firebase Firestore] Could not purge legacy dummy listings:', err.message);
+          });
+        }
+
+        console.log(`[Firebase Firestore] Real-time listings update: ${cloudListings.length} genuine property/properties.`);
         if (typeof onUpdate === 'function') {
           onUpdate(cloudListings);
         }
@@ -169,27 +197,6 @@ const FirebaseModule = (function() {
     } catch (e) {
       console.error('[Firebase] Subscription failed:', e);
       return null;
-    }
-  }
-
-  // Seed default Iligan properties if collection is empty
-  async function seedInitialListings() {
-    if (!db || isSeeding) return;
-    isSeeding = true;
-    try {
-      const batch = db.batch();
-      if (typeof DEFAULT_LISTINGS !== 'undefined' && Array.isArray(DEFAULT_LISTINGS)) {
-        DEFAULT_LISTINGS.forEach(item => {
-          const docRef = db.collection('listings').doc(item.id);
-          batch.set(docRef, item);
-        });
-        await batch.commit();
-        console.log('[Firebase Firestore] Successfully seeded default Iligan City listings into Cloud Firestore!');
-      }
-    } catch (e) {
-      console.warn('[Firebase Firestore] Notice during initial database seeding:', e.message);
-    } finally {
-      isSeeding = false;
     }
   }
 
@@ -219,26 +226,28 @@ const FirebaseModule = (function() {
     }
   }
 
-  // Reset database back to defaults
-  async function resetToDefaults(defaultListings) {
+  // Permanently delete all listings from Firestore
+  async function clearAllListings() {
     if (!db) return false;
     try {
       const snapshot = await db.collection('listings').get();
+      if (snapshot.empty) return true;
       const batch = db.batch();
       snapshot.forEach(doc => {
         batch.delete(doc.ref);
       });
-      defaultListings.forEach(item => {
-        const docRef = db.collection('listings').doc(item.id);
-        batch.set(docRef, item);
-      });
       await batch.commit();
-      console.log('[Firebase Firestore] Database reset to default Iligan City listings.');
+      console.log('[Firebase Firestore] All property listings permanently deleted from Cloud Firestore.');
       return true;
     } catch (e) {
-      console.warn('[Firebase Firestore] Reset to defaults notice:', e.message);
+      console.warn('[Firebase Firestore] Failed to delete all listings:', e.message);
       return false;
     }
+  }
+
+  // Reset function redirects to clear all
+  async function resetToDefaults() {
+    return clearAllListings();
   }
 
   // Save site viewing inquiry to Firestore collection 'inquiries'
@@ -268,6 +277,7 @@ const FirebaseModule = (function() {
     subscribeToListings,
     saveListing,
     deleteListing,
+    clearAllListings,
     resetToDefaults,
     saveInquiry,
     updateStatusBadge
