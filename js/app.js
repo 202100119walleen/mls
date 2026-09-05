@@ -13,6 +13,9 @@ const MLSApp = (function() {
   let isRealtorMode = false;
   let viewMode = 'split'; // 'split', 'grid', 'map'
   let savedListingIds = new Set();
+
+  // Broker Profile State (Syncs with Cloud Firestore settings/brokerProfile)
+  let brokerProfile = MLSStore.getBrokerProfile();
   
   // Inquiries & Leads State
   let inquiries = [];
@@ -45,6 +48,7 @@ const MLSApp = (function() {
     loadSavedFavorites();
     loadData();
     loadInquiries();
+    updateBrokerProfileUI();
     setupEventListeners();
     initMap();
     applyFilters();
@@ -331,10 +335,10 @@ const MLSApp = (function() {
             <!-- Realtor Info & Actions -->
             <div class="mt-4 pt-3 flex items-center justify-between">
               <div class="flex items-center gap-2">
-                <img src="${item.realtor ? item.realtor.avatar : 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=128&q=80'}" 
+                <img src="${(item.realtor && item.realtor.avatar) ? item.realtor.avatar : (brokerProfile.avatar || 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=128&q=80')}" 
                      class="w-7 h-7 rounded-full object-cover border border-slate-200">
                 <span class="text-xs font-medium text-slate-600 truncate max-w-[130px]">
-                  ${item.realtor ? item.realtor.name : 'Engr. Alex Vance, REB'}
+                  ${(item.realtor && item.realtor.name) ? item.realtor.name : (brokerProfile.name || 'Engr. Alex Vance, REB')}
                 </span>
               </div>
 
@@ -352,12 +356,12 @@ const MLSApp = (function() {
                 </div>
               ` : `
                 <div class="flex items-center gap-1.5" onclick="event.stopPropagation()">
-                  <button onclick="MLSApp.initiateCall('${item.realtor ? item.realtor.phone : '+63 917 555 2890'}', '${item.realtor ? item.realtor.name.replace(/'/g, "\\'") : 'Broker Alex Vance'}', '${item.title.replace(/'/g, "\\'")}', 'Listing Broker')" 
+                  <button onclick="MLSApp.initiateCall('${(item.realtor && item.realtor.phone) ? item.realtor.phone : (brokerProfile.phone || '+63 917 555 2890')}', '${(item.realtor && item.realtor.name) ? item.realtor.name.replace(/'/g, "\\'") : (brokerProfile.name || 'Broker Alex Vance').replace(/'/g, "\\'")}', '${item.title.replace(/'/g, "\\'")}', 'Listing Broker')" 
                           class="w-7 h-7 rounded-lg bg-emerald-100 hover:bg-emerald-600 text-emerald-700 hover:text-white flex items-center justify-center transition shadow-2xs"
                           title="Call Broker">
                     <i class="fa-solid fa-phone text-xs"></i>
                   </button>
-                  <button onclick="MLSApp.initiateEmail('${item.realtor ? item.realtor.email : 'broker@iliganmls.ph'}', '${item.realtor ? item.realtor.name.replace(/'/g, "\\'") : 'Broker Alex Vance'}', '${item.title.replace(/'/g, "\\'")}', '${item.id}')" 
+                  <button onclick="MLSApp.initiateEmail('${(item.realtor && item.realtor.email) ? item.realtor.email : (brokerProfile.email || 'broker@iliganmls.ph')}', '${(item.realtor && item.realtor.name) ? item.realtor.name.replace(/'/g, "\\'") : (brokerProfile.name || 'Broker Alex Vance').replace(/'/g, "\\'")}', '${item.title.replace(/'/g, "\\'")}', '${item.id}')" 
                           class="w-7 h-7 rounded-lg bg-blue-100 hover:bg-blue-600 text-blue-700 hover:text-white flex items-center justify-center transition shadow-2xs"
                           title="Email Broker">
                     <i class="fa-solid fa-envelope text-xs"></i>
@@ -629,21 +633,21 @@ const MLSApp = (function() {
           <!-- Realtor Contact Card -->
           <div class="flex items-center justify-between p-4 bg-slate-900 text-white rounded-2xl">
             <div class="flex items-center gap-3">
-              <img src="${listing.realtor ? listing.realtor.avatar : 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=128&q=80'}" 
+              <img src="${(listing.realtor && listing.realtor.avatar) ? listing.realtor.avatar : (brokerProfile.avatar || 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=128&q=80')}" 
                    class="w-12 h-12 rounded-full object-cover border-2 border-slate-700">
               <div>
-                <div class="text-sm font-bold">${listing.realtor ? listing.realtor.name : 'Engr. Alex Vance, REB'}</div>
-                <div class="text-xs text-slate-400">${listing.realtor ? listing.realtor.agency : 'Iligan Premier Realty & Associates'}</div>
-                <div class="text-xs text-amber-400 font-medium">${listing.realtor ? (listing.realtor.prcNo || 'Licensed Real Estate Broker') : 'Licensed Real Estate Broker'}</div>
-                <div class="text-xs text-blue-400 font-mono mt-0.5">${listing.realtor ? listing.realtor.phone : '+63 917 555 2890'}</div>
+                <div class="text-sm font-bold">${(listing.realtor && listing.realtor.name) ? listing.realtor.name : (brokerProfile.name || 'Engr. Alex Vance, REB')}</div>
+                <div class="text-xs text-slate-400">${(listing.realtor && listing.realtor.agency) ? listing.realtor.agency : (brokerProfile.agency || 'Iligan Premier Realty & Associates')}</div>
+                <div class="text-xs text-amber-400 font-medium">${(listing.realtor && listing.realtor.prcNo) ? listing.realtor.prcNo : (brokerProfile.prcNo || 'Licensed Real Estate Broker')}</div>
+                <div class="text-xs text-blue-400 font-mono mt-0.5">${(listing.realtor && listing.realtor.phone) ? listing.realtor.phone : (brokerProfile.phone || '+63 917 555 2890')}</div>
               </div>
             </div>
             <div class="flex flex-wrap items-center gap-2">
-              <button onclick="MLSApp.initiateCall('${listing.realtor ? listing.realtor.phone : '+63 917 555 2890'}', '${listing.realtor ? listing.realtor.name.replace(/'/g, "\\'") : 'Engr. Alex Vance'}', '${listing.title.replace(/'/g, "\\'")}', 'Realtor Broker')" 
+              <button onclick="MLSApp.initiateCall('${(listing.realtor && listing.realtor.phone) ? listing.realtor.phone : (brokerProfile.phone || '+63 917 555 2890')}', '${(listing.realtor && listing.realtor.name) ? listing.realtor.name.replace(/'/g, "\\'") : (brokerProfile.name || 'Engr. Alex Vance').replace(/'/g, "\\'")}', '${listing.title.replace(/'/g, "\\'")}', 'Realtor Broker')" 
                       class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
                 <i class="fa-solid fa-phone"></i> Call Broker
               </button>
-              <button onclick="MLSApp.initiateEmail('${listing.realtor ? listing.realtor.email : 'broker@iliganmls.ph'}', '${listing.realtor ? listing.realtor.name.replace(/'/g, "\\'") : 'Engr. Alex Vance'}', '${listing.title.replace(/'/g, "\\'")}', '${listing.id}')" 
+              <button onclick="MLSApp.initiateEmail('${(listing.realtor && listing.realtor.email) ? listing.realtor.email : (brokerProfile.email || 'broker@iliganmls.ph')}', '${(listing.realtor && listing.realtor.name) ? listing.realtor.name.replace(/'/g, "\\'") : (brokerProfile.name || 'Engr. Alex Vance').replace(/'/g, "\\'")}', '${listing.title.replace(/'/g, "\\'")}', '${listing.id}')" 
                       class="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
                 <i class="fa-solid fa-envelope"></i> Email
               </button>
@@ -1095,12 +1099,12 @@ const MLSApp = (function() {
     document.getElementById('editListingForm').reset();
     document.getElementById('editListingId').value = '';
     
-    // Reset realtor fields
-    if (document.getElementById('editRealtorName')) document.getElementById('editRealtorName').value = '';
-    if (document.getElementById('editRealtorAgency')) document.getElementById('editRealtorAgency').value = '';
-    if (document.getElementById('editRealtorPhone')) document.getElementById('editRealtorPhone').value = '';
-    if (document.getElementById('editRealtorEmail')) document.getElementById('editRealtorEmail').value = '';
-    if (document.getElementById('editRealtorPrc')) document.getElementById('editRealtorPrc').value = '';
+    // Pre-populate realtor fields with current broker profile defaults
+    if (document.getElementById('editRealtorName')) document.getElementById('editRealtorName').value = brokerProfile.name || '';
+    if (document.getElementById('editRealtorAgency')) document.getElementById('editRealtorAgency').value = brokerProfile.agency || '';
+    if (document.getElementById('editRealtorPhone')) document.getElementById('editRealtorPhone').value = brokerProfile.phone || '';
+    if (document.getElementById('editRealtorEmail')) document.getElementById('editRealtorEmail').value = brokerProfile.email || '';
+    if (document.getElementById('editRealtorPrc')) document.getElementById('editRealtorPrc').value = brokerProfile.prcNo || '';
     
     // Set default Iligan City values
     document.getElementById('editCity').value = 'Iligan City';
@@ -1437,12 +1441,12 @@ const MLSApp = (function() {
       amenities,
       images: editorImages,
       realtor: {
-        name: document.getElementById('editRealtorName')?.value.trim() || 'Licensed Broker / Agent',
-        agency: document.getElementById('editRealtorAgency')?.value.trim() || 'Iligan Premier Realty Services',
-        phone: document.getElementById('editRealtorPhone')?.value.trim() || '+63 917 555 2890',
-        email: document.getElementById('editRealtorEmail')?.value.trim() || 'realtor@iliganmls.ph',
-        prcNo: document.getElementById('editRealtorPrc')?.value.trim() || 'PRC / DHSUD Registered',
-        avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=256&q=80'
+        name: document.getElementById('editRealtorName')?.value.trim() || brokerProfile.name || 'Licensed Broker / Agent',
+        agency: document.getElementById('editRealtorAgency')?.value.trim() || brokerProfile.agency || 'Iligan Premier Realty Services',
+        phone: document.getElementById('editRealtorPhone')?.value.trim() || brokerProfile.phone || '+63 917 555 2890',
+        email: document.getElementById('editRealtorEmail')?.value.trim() || brokerProfile.email || 'broker@iliganmls.ph',
+        prcNo: document.getElementById('editRealtorPrc')?.value.trim() || brokerProfile.prcNo || 'PRC / DHSUD Registered',
+        avatar: brokerProfile.avatar || 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=256&q=80'
       }
     };
 
@@ -2013,8 +2017,8 @@ const MLSApp = (function() {
   // Initiate Call Action Modal
   function initiateCall(phone, name, propertyTitle, role = 'Realtor Broker') {
     activeCallData = { 
-      phone: phone || '+63 917 555 2890', 
-      name: name || 'Realtor Broker', 
+      phone: phone || brokerProfile.phone || '+63 917 555 2890', 
+      name: name || brokerProfile.name || 'Realtor Broker', 
       propertyTitle: propertyTitle || 'Iligan MLS Property', 
       role: role || 'Contact' 
     };
@@ -2089,8 +2093,8 @@ const MLSApp = (function() {
   // Initiate Email Action Modal
   function initiateEmail(email, name, propertyTitle, listingId = '') {
     activeEmailData = { 
-      email: email || 'broker@iliganmls.ph', 
-      name: name || 'Realtor Broker', 
+      email: email || brokerProfile.email || 'broker@iliganmls.ph', 
+      name: name || brokerProfile.name || 'Realtor Broker', 
       propertyTitle: propertyTitle || 'Iligan MLS Property',
       listingId: listingId || ''
     };
@@ -2153,7 +2157,7 @@ const MLSApp = (function() {
   function updateMailtoLink() {
     const mailtoBtn = document.getElementById('emailMailtoLink');
     if (!mailtoBtn) return;
-    const to = activeEmailData.email || 'broker@iliganmls.ph';
+    const to = activeEmailData.email || brokerProfile.email || 'broker@iliganmls.ph';
     const subject = document.getElementById('emailSubjectInput')?.value || `Inquiry on ${activeEmailData.propertyTitle}`;
     const body = document.getElementById('emailBodyInput')?.value || '';
     mailtoBtn.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -2161,7 +2165,7 @@ const MLSApp = (function() {
 
   // Open Gmail Web API
   function openInGmailWeb() {
-    const to = activeEmailData.email || 'broker@iliganmls.ph';
+    const to = activeEmailData.email || brokerProfile.email || 'broker@iliganmls.ph';
     const subject = document.getElementById('emailSubjectInput')?.value || `Inquiry regarding ${activeEmailData.propertyTitle}`;
     const body = document.getElementById('emailBodyInput')?.value || '';
     const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -2171,7 +2175,7 @@ const MLSApp = (function() {
 
   // Open Outlook Live Web API
   function openInOutlookWeb() {
-    const to = activeEmailData.email || 'broker@iliganmls.ph';
+    const to = activeEmailData.email || brokerProfile.email || 'broker@iliganmls.ph';
     const subject = document.getElementById('emailSubjectInput')?.value || `Inquiry regarding ${activeEmailData.propertyTitle}`;
     const body = document.getElementById('emailBodyInput')?.value || '';
     const outlookUrl = `https://outlook.live.com/mail/0/deeplink/compose?to=${encodeURIComponent(to)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -2328,6 +2332,113 @@ const MLSApp = (function() {
     if (propertyTypeSelect) propertyTypeSelect.value = 'all';
 
     applyFilters();
+  }
+
+  // ==========================================
+  // Broker Profile Management & Real-Time Sync
+  // ==========================================
+  function updateBrokerProfileUI() {
+    // 1. Update About / Brokerage Section Displays
+    const aboutAgency = document.getElementById('aboutBrokerAgencyDisplay');
+    if (aboutAgency) aboutAgency.innerText = brokerProfile.agency || 'Iligan Premier Realty & Associates';
+
+    const aboutName = document.getElementById('aboutBrokerNameDisplay');
+    if (aboutName) aboutName.innerText = brokerProfile.name || 'Engr. Alex Vance, REB';
+
+    const aboutPhone = document.getElementById('aboutBrokerPhoneDisplay');
+    if (aboutPhone) aboutPhone.innerHTML = `<i class="fa-solid fa-phone text-[10px]"></i> ${brokerProfile.phone || '+63 917 555 2890'}`;
+
+    const aboutEmail = document.getElementById('aboutBrokerEmailDisplay');
+    if (aboutEmail) aboutEmail.innerHTML = `<i class="fa-solid fa-envelope text-[10px]"></i> ${brokerProfile.email || 'broker@iliganmls.ph'}`;
+
+    // 2. Populate Settings Modal Inputs
+    const nameInput = document.getElementById('profileBrokerName');
+    if (nameInput) nameInput.value = brokerProfile.name || '';
+
+    const phoneInput = document.getElementById('profileBrokerPhone');
+    if (phoneInput) phoneInput.value = brokerProfile.phone || '';
+
+    const emailInput = document.getElementById('profileBrokerEmail');
+    if (emailInput) emailInput.value = brokerProfile.email || '';
+
+    const agencyInput = document.getElementById('profileBrokerAgency');
+    if (agencyInput) agencyInput.value = brokerProfile.agency || '';
+
+    const licenseInput = document.getElementById('profileBrokerLicense');
+    if (licenseInput) licenseInput.value = brokerProfile.prcNo || '';
+
+    const avatarInput = document.getElementById('profileBrokerAvatar');
+    if (avatarInput) avatarInput.value = brokerProfile.avatar || '';
+
+    // 3. Update Settings Modal Live Preview Card
+    const previewName = document.getElementById('profilePreviewName');
+    if (previewName) previewName.innerText = brokerProfile.name || 'Broker Name';
+
+    const previewAgency = document.getElementById('profilePreviewAgency');
+    if (previewAgency) previewAgency.innerText = brokerProfile.agency || 'Realty Firm';
+
+    const previewPhone = document.getElementById('profilePreviewPhone');
+    if (previewPhone) previewPhone.innerText = brokerProfile.phone || '+63 ...';
+
+    const previewEmail = document.getElementById('profilePreviewEmail');
+    if (previewEmail) previewEmail.innerText = brokerProfile.email || 'email@domain.com';
+
+    const previewAvatar = document.getElementById('profilePreviewAvatar');
+    if (previewAvatar && brokerProfile.avatar) previewAvatar.src = brokerProfile.avatar;
+
+    // 4. Update dynamic listings with updated profile
+    renderListings();
+  }
+
+  function openBrokerProfileModal() {
+    if (!isRealtorAuthenticated) {
+      promptRealtorLogin();
+      showToast('Please log in as Realtor/Admin to edit broker profile.', 'warning');
+      return;
+    }
+    updateBrokerProfileUI();
+    const modal = document.getElementById('brokerProfileModal');
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+  }
+
+  function closeBrokerProfileModal() {
+    const modal = document.getElementById('brokerProfileModal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+  }
+
+  function handleSaveBrokerProfile(e) {
+    if (e) e.preventDefault();
+    const name = document.getElementById('profileBrokerName')?.value.trim();
+    const phone = document.getElementById('profileBrokerPhone')?.value.trim();
+    const email = document.getElementById('profileBrokerEmail')?.value.trim();
+    const agency = document.getElementById('profileBrokerAgency')?.value.trim();
+    const prcNo = document.getElementById('profileBrokerLicense')?.value.trim();
+    const avatar = document.getElementById('profileBrokerAvatar')?.value.trim();
+
+    if (!name || !phone || !email) {
+      showToast('Name, phone number, and email are required.', 'error');
+      return;
+    }
+
+    const updated = MLSStore.saveBrokerProfile({
+      name,
+      phone,
+      email,
+      agency: agency || 'Iligan Premier Realty & Associates',
+      prcNo: prcNo || 'PRC REB Lic. #0028941 | DHSUD Reg. #R10-B-04/23-119',
+      avatar: avatar || 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=128&q=80'
+    });
+
+    brokerProfile = updated;
+    updateBrokerProfileUI();
+    closeBrokerProfileModal();
+    showToast('Broker profile updated and synced to user side!', 'success');
   }
 
   function setupEventListeners() {
@@ -2497,6 +2608,21 @@ const MLSApp = (function() {
         handleInquiriesUpdate(cloudInquiries);
       });
     }
+
+    // Subscribe to real-time Cloud Firestore updates for Broker Profile
+    if (typeof FirebaseModule !== 'undefined' && FirebaseModule.subscribeToBrokerProfile) {
+      FirebaseModule.subscribeToBrokerProfile((cloudProfile) => {
+        if (cloudProfile && typeof cloudProfile === 'object') {
+          console.log('[MLSApp] Real-time broker profile updated from Cloud Firestore:', cloudProfile);
+          brokerProfile = {
+            ...brokerProfile,
+            ...cloudProfile
+          };
+          localStorage.setItem('jobacs_mls_broker_profile_v1', JSON.stringify(brokerProfile));
+          updateBrokerProfileUI();
+        }
+      });
+    }
   }
 
   return {
@@ -2526,6 +2652,10 @@ const MLSApp = (function() {
     setInquiryStatus,
     confirmDeleteInquiry,
     requestDesktopNotifications,
+    openBrokerProfileModal,
+    closeBrokerProfileModal,
+    handleSaveBrokerProfile,
+    updateBrokerProfileUI,
     searchAddressOnMap,
     locateGpsAndAutoFillAddress,
     autoFillAddressFromPin,

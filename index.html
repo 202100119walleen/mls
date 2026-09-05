@@ -149,6 +149,14 @@
           <i class="fa-solid fa-plus"></i> New Property
         </button>
 
+        <button onclick="MLSApp.openBrokerProfileModal()" 
+                id="realtorProfileBtn"
+                class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold rounded-lg transition flex items-center gap-1.5 border border-slate-700 shadow-sm"
+                title="Edit Broker Contact Info (Name, Email, Phone)">
+          <i class="fa-solid fa-user-gear text-amber-400"></i>
+          <span>Broker Profile</span>
+        </button>
+
         <button onclick="MLSApp.clearAllData()" title="Permanently delete all listings from Firestore and local cache" class="px-2.5 py-1.5 bg-rose-950/80 hover:bg-rose-700 text-rose-300 hover:text-white font-semibold rounded-lg transition flex items-center gap-1.5 border border-rose-800/80 shadow-sm">
           <i class="fa-solid fa-trash-can text-[11px]"></i> Clear Database
         </button>
@@ -379,20 +387,27 @@
             <i class="fa-solid fa-landmark"></i>
           </div>
           <div>
-            <div class="text-sm font-bold text-white">Iligan City MLS & Realty Services</div>
+            <div id="aboutBrokerAgencyDisplay" class="text-sm font-bold text-white">Iligan Premier Realty & Associates</div>
+            <div id="aboutBrokerNameDisplay" class="text-xs text-amber-400 font-medium">Engr. Alex Vance, REB</div>
             <div class="text-xs text-slate-400">Serving all Barangays across Iligan City, Lanao del Norte 9200, Philippines</div>
-            <div class="text-[11px] text-blue-400 mt-0.5">Live Cloud Firestore Real Estate Network</div>
+            <div class="text-[11px] text-blue-400 mt-0.5 flex flex-wrap items-center gap-2">
+              <span id="aboutBrokerPhoneDisplay"><i class="fa-solid fa-phone text-[10px]"></i> +63 917 555 2890</span>
+              <span>•</span>
+              <span id="aboutBrokerEmailDisplay"><i class="fa-solid fa-envelope text-[10px]"></i> broker@iliganmls.ph</span>
+            </div>
           </div>
         </div>
 
         <!-- Client direct Call & Email buttons for general brokerage inquiries -->
         <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end border-t md:border-t-0 pt-4 md:pt-0 border-slate-800">
-          <button onclick="MLSApp.initiateCall('+63 917 555 2890', 'Iligan MLS Brokerage Desk', 'General Property Inquiry')" 
+          <button id="aboutCallBtn" 
+                  onclick="MLSApp.initiateCall()" 
                   class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm">
             <i class="fa-solid fa-phone"></i>
             <span>Call Office</span>
           </button>
-          <button onclick="MLSApp.initiateEmail('broker@iliganmls.ph', 'Iligan MLS Brokerage Desk', 'General Property Inquiry')" 
+          <button id="aboutEmailBtn" 
+                  onclick="MLSApp.initiateEmail()" 
                   class="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm">
             <i class="fa-solid fa-envelope"></i>
             <span>Email Us</span>
@@ -1525,6 +1540,151 @@
           Close
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- ==================================================== -->
+  <!-- MODAL: REALTOR / BROKER PROFILE SETTINGS (ADMIN)     -->
+  <!-- ==================================================== -->
+  <div id="brokerProfileModal" 
+       style="z-index: 9999;" 
+       class="fixed inset-0 hidden items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-sm overflow-y-auto"
+       onclick="if(event.target === this) MLSApp.closeBrokerProfileModal()">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full max-h-[92vh] flex flex-col overflow-hidden animate-modal border border-slate-100 relative z-10">
+      
+      <!-- Header -->
+      <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-user-gear"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white">Edit Broker Profile & Contact Info</h3>
+            <p class="text-xs text-slate-400">Updates broker name, email, and phone across the entire platform</p>
+          </div>
+        </div>
+        <button onclick="MLSApp.closeBrokerProfileModal()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+
+      <!-- Form Body -->
+      <form id="brokerProfileForm" onsubmit="MLSApp.handleSaveBrokerProfile(event)" class="p-6 overflow-y-auto flex-1 space-y-4 text-xs">
+        
+        <!-- Live Preview Pill -->
+        <div class="p-4 bg-gradient-to-r from-blue-50 to-indigo-50/60 rounded-2xl border border-blue-100 flex items-center gap-3">
+          <img id="profilePreviewAvatar" 
+               src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=128&q=80" 
+               class="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm flex-shrink-0">
+          <div class="min-w-0">
+            <span class="text-[10px] uppercase font-bold text-blue-600 tracking-wider block">Live Public Profile</span>
+            <div id="profilePreviewName" class="font-extrabold text-slate-900 truncate text-sm">Engr. Alex Vance, REB</div>
+            <div id="profilePreviewAgency" class="text-[11px] text-slate-600 truncate">Iligan Premier Realty & Associates</div>
+            <div class="text-[10px] text-emerald-700 font-mono mt-0.5 truncate flex items-center gap-2">
+              <span id="profilePreviewPhone">+63 917 555 2890</span>
+              <span>•</span>
+              <span id="profilePreviewEmail">broker@iliganmls.ph</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Full Name -->
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">
+            <i class="fa-solid fa-user-tie text-blue-600 mr-1"></i> Broker / Realtor Full Name
+          </label>
+          <input type="text" 
+                 id="profileBrokerName" 
+                 required 
+                 placeholder="e.g. Engr. Alex Vance, REB"
+                 oninput="document.getElementById('profilePreviewName').innerText = this.value || 'Broker Name'"
+                 class="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none font-bold text-slate-800">
+          <span class="text-[10px] text-slate-400">Displayed on every property card, detail modal, and inquiries header.</span>
+        </div>
+
+        <!-- Phone & Email Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">
+              <i class="fa-solid fa-phone text-emerald-600 mr-1"></i> Phone / Mobile Number
+            </label>
+            <input type="tel" 
+                   id="profileBrokerPhone" 
+                   required 
+                   placeholder="e.g. +63 917 555 2890"
+                   oninput="document.getElementById('profilePreviewPhone').innerText = this.value || '+63 ...'"
+                   class="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none font-mono font-semibold text-slate-800">
+            <span class="text-[10px] text-slate-400">Clients will call & WhatsApp this number.</span>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">
+              <i class="fa-solid fa-envelope text-blue-600 mr-1"></i> Official Email Address
+            </label>
+            <input type="email" 
+                   id="profileBrokerEmail" 
+                   required 
+                   placeholder="e.g. broker@iliganmls.ph"
+                   oninput="document.getElementById('profilePreviewEmail').innerText = this.value || 'email@domain.com'"
+                   class="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none text-slate-800">
+            <span class="text-[10px] text-slate-400">Clients will send inquiries to this email.</span>
+          </div>
+        </div>
+
+        <!-- Agency / Brokerage Firm -->
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">
+            <i class="fa-solid fa-building text-slate-600 mr-1"></i> Agency / Realty Firm Name
+          </label>
+          <input type="text" 
+                 id="profileBrokerAgency" 
+                 required 
+                 placeholder="e.g. Iligan Premier Realty & Associates"
+                 oninput="document.getElementById('profilePreviewAgency').innerText = this.value || 'Realty Firm'"
+                 class="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none text-slate-800">
+        </div>
+
+        <!-- PRC License / Accreditation -->
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">
+            <i class="fa-solid fa-certificate text-amber-500 mr-1"></i> PRC License / DHSUD Registration
+          </label>
+          <input type="text" 
+                 id="profileBrokerLicense" 
+                 placeholder="e.g. PRC REB Lic. #0028941 | DHSUD Reg. #R10-B-04/23-119"
+                 class="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none text-slate-800">
+        </div>
+
+        <!-- Avatar URL -->
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">
+            <i class="fa-solid fa-image text-purple-600 mr-1"></i> Broker Profile Photo URL
+          </label>
+          <input type="url" 
+                 id="profileBrokerAvatar" 
+                 placeholder="https://..."
+                 oninput="if(this.value) document.getElementById('profilePreviewAvatar').src = this.value"
+                 class="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none font-mono text-slate-800 text-[11px]">
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" 
+                class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl transition shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 text-sm mt-2">
+          <i class="fa-solid fa-check"></i>
+          <span>Save Profile & Update User Side</span>
+        </button>
+      </form>
+
+      <!-- Footer -->
+      <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
+        <span class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          Updates cards, detail modals, & contact APIs in real time
+        </span>
+        <button type="button" onclick="MLSApp.closeBrokerProfileModal()" class="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition">
+          Close
+        </button>
+      </div>
+
     </div>
   </div>
 

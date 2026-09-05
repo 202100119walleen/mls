@@ -215,6 +215,59 @@ const MLSStore = {
       FirebaseModule.deleteInquiry(id);
     }
     return list;
+  },
+
+  // ==========================================
+  // Broker / Admin Profile Store Management
+  // ==========================================
+  getBrokerProfile: function() {
+    try {
+      const stored = localStorage.getItem('jobacs_mls_broker_profile_v1');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed === 'object') {
+          return {
+            name: parsed.name || 'Engr. Alex Vance, REB',
+            agency: parsed.agency || 'Iligan Premier Realty & Associates',
+            phone: parsed.phone || '+63 917 555 2890',
+            email: parsed.email || 'broker@iliganmls.ph',
+            prcNo: parsed.prcNo || 'PRC REB Lic. #0028941 | DHSUD Reg. #R10-B-04/23-119',
+            avatar: parsed.avatar || 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=128&q=80'
+          };
+        }
+      }
+    } catch(e) {
+      console.error('[MLSStore] Error reading broker profile:', e);
+    }
+    return {
+      name: 'Engr. Alex Vance, REB',
+      agency: 'Iligan Premier Realty & Associates',
+      phone: '+63 917 555 2890',
+      email: 'broker@iliganmls.ph',
+      prcNo: 'PRC REB Lic. #0028941 | DHSUD Reg. #R10-B-04/23-119',
+      avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=128&q=80'
+    };
+  },
+
+  saveBrokerProfile: function(profileData) {
+    try {
+      const current = this.getBrokerProfile();
+      const updated = {
+        ...current,
+        ...profileData,
+        updatedAt: new Date().toISOString()
+      };
+      localStorage.setItem('jobacs_mls_broker_profile_v1', JSON.stringify(updated));
+
+      // Sync to Cloud Firestore
+      if (typeof FirebaseModule !== 'undefined' && FirebaseModule.saveBrokerProfile) {
+        FirebaseModule.saveBrokerProfile(updated);
+      }
+      return updated;
+    } catch(e) {
+      console.error('[MLSStore] Error saving broker profile:', e);
+      return profileData;
+    }
   }
 };
 

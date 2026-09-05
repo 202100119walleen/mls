@@ -329,6 +329,42 @@ const FirebaseModule = (function() {
     }
   }
 
+  // ==========================================
+  // Broker Profile Cloud Sync
+  // ==========================================
+  let unsubscribeProfile = null;
+  function subscribeToBrokerProfile(onUpdate) {
+    if (!db) return null;
+    try {
+      if (unsubscribeProfile) unsubscribeProfile();
+      unsubscribeProfile = db.collection('settings').doc('brokerProfile').onSnapshot(doc => {
+        if (doc && doc.exists) {
+          const profile = doc.data();
+          console.log('[Firebase Firestore] Received broker profile update in real-time:', profile);
+          if (typeof onUpdate === 'function') onUpdate(profile);
+        }
+      }, error => {
+        console.warn('[Firebase Firestore] Broker profile listener notice:', error.message);
+      });
+      return unsubscribeProfile;
+    } catch(e) {
+      console.error('[Firebase] Broker profile subscription failed:', e);
+      return null;
+    }
+  }
+
+  async function saveBrokerProfile(profileData) {
+    if (!db) return false;
+    try {
+      await db.collection('settings').doc('brokerProfile').set(profileData, { merge: true });
+      console.log('[Firebase Firestore] Broker profile saved to cloud database.');
+      return true;
+    } catch(e) {
+      console.warn('[Firebase Firestore] Failed to save broker profile:', e.message);
+      return false;
+    }
+  }
+
   return {
     init,
     getDb: () => db,
@@ -343,6 +379,8 @@ const FirebaseModule = (function() {
     saveInquiry,
     updateInquiryStatus,
     deleteInquiry,
+    subscribeToBrokerProfile,
+    saveBrokerProfile,
     updateStatusBadge
   };
 })();
