@@ -1,14 +1,25 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Iligan City MLS Listings collection: Allow public read, allow read/write for listings
+    // 1. Iligan City MLS Listings Collection (Public View, Realtor Management)
     match /listings/{listingId} {
       allow read, write: if true;
     }
     
-    // Site viewing inquiries collection: Allow creation and management of inquiries
+    // 2. Client Inquiries & Viewing Leads Collection (Public Inquire, Realtor Management)
     match /inquiries/{inquiryId} {
+      allow read, write: if true;
+    }
+
+    // 3. Broker Profile & Platform Settings Collection (Public View, Admin Profile Sync)
+    match /settings/{settingId} {
+      allow read, write: if true;
+    }
+
+    // Comprehensive rule ensuring no collection or document is blocked
+    match /{document=**} {
       allow read, write: if true;
     }
     

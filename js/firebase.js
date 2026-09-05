@@ -342,6 +342,13 @@ const FirebaseModule = (function() {
           const profile = doc.data();
           console.log('[Firebase Firestore] Received broker profile update in real-time:', profile);
           if (typeof onUpdate === 'function') onUpdate(profile);
+        } else if (doc && !doc.exists) {
+          // If the brokerProfile document does not exist yet in Firestore, seed it with current local profile
+          console.log('[Firebase Firestore] Broker profile document not found in cloud, seeding initial profile...');
+          if (typeof MLSStore !== 'undefined' && MLSStore.getBrokerProfile) {
+            const initial = MLSStore.getBrokerProfile();
+            saveBrokerProfile(initial);
+          }
         }
       }, error => {
         console.warn('[Firebase Firestore] Broker profile listener notice:', error.message);
