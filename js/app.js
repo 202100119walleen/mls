@@ -14,6 +14,13 @@ const MLSApp = (function() {
   let viewMode = 'split'; // 'split', 'grid', 'map'
   let savedListingIds = new Set();
   
+  // Inquiries & Leads State
+  let inquiries = [];
+  let knownInquiryIds = new Set();
+  let activeInquiryFilter = 'all'; // 'all' | 'new' | 'contacted' | 'closed'
+  let inquirySearchQuery = '';
+  let isInitialInquirySync = true;
+  
   // Current Realtor Editor Form State (Defaults to Iligan City)
   let editingId = null;
   let editorImages = [];
@@ -37,10 +44,17 @@ const MLSApp = (function() {
   function init() {
     loadSavedFavorites();
     loadData();
+    loadInquiries();
     setupEventListeners();
     initMap();
     applyFilters();
     updateRealtorStats();
+    updateInquiryBadges();
+  }
+
+  function loadInquiries() {
+    inquiries = MLSStore.getInquiries();
+    inquiries.forEach(i => knownInquiryIds.add(i.id));
   }
 
   // Load favorites from localStorage
@@ -1480,27 +1494,427 @@ const MLSApp = (function() {
   function handleTourSubmit(e) {
     e.preventDefault();
     const listingId = document.getElementById('tourListingId')?.value || '';
-    const name = document.getElementById('tourName')?.value || '';
-    const email = document.getElementById('tourEmail')?.value || '';
-    const phone = document.getElementById('tourPhone')?.value || '';
+    const name = document.getElementById('tourName')?.value.trim() || '';
+    const email = document.getElementById('tourEmail')?.value.trim() || '';
+    const phone = document.getElementById('tourPhone')?.value.trim() || '';
     const date = document.getElementById('tourDate')?.value || '';
     const messageInput = document.querySelector('#tourForm textarea');
-    const message = messageInput ? messageInput.value : '';
+    const message = messageInput ? messageInput.value.trim() : '';
+
+    const listing = listings.find(item => item.id === listingId);
 
     const inquiryData = {
+      id: 'INQ-' + Date.now(),
       listingId,
+      propertyTitle: listing ? listing.title : 'General Property Inquiry',
+      propertyPrice: listing ? listing.price : null,
+      propertyListingType: listing ? listing.listingType : 'sale',
+      propertyAddress: listing ? `${listing.address}, ${listing.city}` : '',
+      propertyImage: (listing && listing.images && listing.images[0]) || '',
       name,
       email,
       phone,
       date,
-      message
+      message,
+      status: 'new',
+      createdAt: new Date().toISOString()
     };
 
     // Save to Firebase Cloud Firestore and Local Cache
     MLSStore.saveViewingInquiry(inquiryData);
 
     closeTourModal();
-    showToast(`Site viewing request submitted for ${name}! Saved to database. Broker Alex Vance will contact you.`, 'success');
+    const form = document.getElementById('tourForm');
+    if (form) form.reset();
+
+    showToast(`Site viewing inquiry sent for ${name}! Broker will contact you at ${phone}.`, 'success');
+  }
+
+  // Melodic Web Audio notification chime (Pure JS, no external audio files required)
+  function playNotificationChime() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+
+      // Note 1: 587.33 Hz (D5)
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(587.33, now);
+      gain1.gain.setValueAtTime(0.25, now);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.35);
+
+      // Note 2: 880.00 Hz (A5)
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'triangle';
+      osc2.frequency.setValueAtTime(880.00, now + 0.12);
+      gain2.gain.setValueAtTime(0.3, now + 0.12);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(now + 0.12);
+      osc2.stop(now + 0.6);
+    } catch (e) {
+      console.log('Notification chime audio notice:', e);
+    }
+  }
+
+  // Request browser desktop push notifications
+  function requestDesktopNotifications() {
+    if ('Notification' in window) {
+      Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+          showToast('Desktop push notifications enabled! You will be alerted when new inquiries arrive.', 'success');
+        } else {
+          showToast('Desktop notifications were disabled or denied.', 'warning');
+        }
+      });
+    } else {
+      showToast('Browser notifications are not supported in this browser.', 'info');
+    }
+  }
+
+  // Show high-priority in-app inquiry notification toast
+  function showInquiryNotificationToast(inq, totalNew = 1) {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = 'pointer-events-auto flex items-start gap-3 bg-slate-900 text-white p-4 rounded-2xl shadow-2xl border border-blue-500/60 max-w-sm w-full transition-all duration-300 transform translate-y-4 opacity-0';
+    toast.innerHTML = `
+      <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center flex-shrink-0 text-lg shadow-md">
+        <i class="fa-solid fa-bell animate-pulse"></i>
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-blue-400">New Client Lead</span>
+          <span class="text-[10px] text-slate-400">Just now</span>
+        </div>
+        <div class="font-extrabold text-sm text-white truncate mt-0.5">${inq.name || 'Anonymous Client'}</div>
+        <div class="text-xs text-slate-300 truncate">${inq.propertyTitle || 'Property Inquiry'}</div>
+        <div class="text-[11px] text-blue-300 font-mono mt-0.5">${inq.phone || inq.email || ''}</div>
+        <div class="mt-2.5 flex items-center gap-2">
+          <button onclick="MLSApp.openInquiriesModal(); this.closest('div.pointer-events-auto').remove()" class="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg text-xs transition shadow-sm">
+            View Lead
+          </button>
+          <button onclick="this.closest('div.pointer-events-auto').remove()" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs transition">
+            Dismiss
+          </button>
+        </div>
+      </div>
+      <button onclick="this.closest('div.pointer-events-auto').remove()" class="text-slate-400 hover:text-white text-xs p-1">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    `;
+
+    container.appendChild(toast);
+    requestAnimationFrame(() => {
+      toast.classList.remove('translate-y-4', 'opacity-0');
+    });
+
+    setTimeout(() => {
+      if (toast.parentElement) {
+        toast.classList.add('opacity-0', 'translate-x-4');
+        setTimeout(() => toast.remove(), 300);
+      }
+    }, 12000);
+  }
+
+  // Handle incoming inquiries from Cloud Firestore listener
+  function handleInquiriesUpdate(cloudInquiries) {
+    if (!Array.isArray(cloudInquiries)) return;
+
+    if (!isInitialInquirySync) {
+      const brandNew = [];
+      cloudInquiries.forEach(inq => {
+        if (!knownInquiryIds.has(inq.id)) {
+          brandNew.push(inq);
+        }
+      });
+
+      if (brandNew.length > 0) {
+        playNotificationChime();
+        const latest = brandNew[0];
+        showInquiryNotificationToast(latest, brandNew.length);
+
+        if ('Notification' in window && Notification.permission === 'granted') {
+          try {
+            new Notification('🔔 New Property Inquiry - Iligan MLS', {
+              body: `${latest.name || 'Client'} (${latest.phone || ''}) inquired about ${latest.propertyTitle || 'a property'}!`,
+              icon: latest.propertyImage || undefined
+            });
+          } catch(e) {}
+        }
+      }
+    }
+
+    isInitialInquirySync = false;
+    inquiries = cloudInquiries;
+    cloudInquiries.forEach(inq => knownInquiryIds.add(inq.id));
+
+    MLSStore.saveAllInquiries(cloudInquiries);
+    updateInquiryBadges();
+    renderInquiriesList();
+  }
+
+  // Update badge counts in navbar, admin bar, and modal
+  function updateInquiryBadges() {
+    const newCount = inquiries.filter(i => i.status === 'new').length;
+    
+    // Navbar badge
+    const navBadge = document.getElementById('navInquiryBadge');
+    if (navBadge) {
+      if (newCount > 0) {
+        navBadge.innerText = newCount > 99 ? '99+' : newCount;
+        navBadge.classList.remove('hidden');
+        navBadge.classList.add('inline-flex', 'animate-pulse');
+      } else {
+        navBadge.classList.add('hidden');
+        navBadge.classList.remove('inline-flex', 'animate-pulse');
+      }
+    }
+
+    // Realtor Admin Bar badge
+    const realtorBadge = document.getElementById('realtorInquiryBadge');
+    if (realtorBadge) {
+      if (newCount > 0) {
+        realtorBadge.innerText = `${newCount} New`;
+        realtorBadge.classList.remove('hidden');
+      } else {
+        realtorBadge.classList.add('hidden');
+      }
+    }
+
+    // Modal unread pill
+    const modalPill = document.getElementById('modalInquiryUnreadPill');
+    if (modalPill) {
+      if (newCount > 0) {
+        modalPill.innerText = `${newCount} New`;
+        modalPill.classList.remove('hidden');
+      } else {
+        modalPill.classList.add('hidden');
+      }
+    }
+
+    // Tab counts
+    const countAll = document.getElementById('countInqAll');
+    const countNew = document.getElementById('countInqNew');
+    const countContacted = document.getElementById('countInqContacted');
+    const countClosed = document.getElementById('countInqClosed');
+
+    if (countAll) countAll.innerText = inquiries.length;
+    if (countNew) countNew.innerText = inquiries.filter(i => i.status === 'new').length;
+    if (countContacted) countContacted.innerText = inquiries.filter(i => i.status === 'contacted').length;
+    if (countClosed) countClosed.innerText = inquiries.filter(i => i.status === 'closed').length;
+  }
+
+  // Open Inquiries Management Modal (requires admin authentication)
+  function openInquiriesModal() {
+    if (!isRealtorAuthenticated) {
+      promptRealtorLogin();
+      showToast('Please enter the Realtor passcode (admin010211) to view client leads.', 'warning');
+      return;
+    }
+
+    const modal = document.getElementById('inquiriesModal');
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      renderInquiriesList();
+    }
+  }
+
+  function closeInquiriesModal() {
+    const modal = document.getElementById('inquiriesModal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+  }
+
+  function filterInquiries(status) {
+    activeInquiryFilter = status;
+    
+    const tabs = ['all', 'new', 'contacted', 'closed'];
+    tabs.forEach(t => {
+      const btn = document.getElementById(`tabInq${t.charAt(0).toUpperCase() + t.slice(1)}`);
+      if (btn) {
+        if (t === status) {
+          btn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold transition bg-blue-600 text-white shadow-xs';
+        } else {
+          btn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold transition bg-white text-slate-600 hover:bg-slate-100 border border-slate-200';
+        }
+      }
+    });
+
+    renderInquiriesList();
+  }
+
+  function handleInquirySearch(query) {
+    inquirySearchQuery = (query || '').toLowerCase().trim();
+    renderInquiriesList();
+  }
+
+  // Render client inquiries list
+  function renderInquiriesList() {
+    const container = document.getElementById('inquiriesListContainer');
+    if (!container) return;
+
+    let filtered = inquiries.slice();
+
+    if (activeInquiryFilter !== 'all') {
+      filtered = filtered.filter(i => (i.status || 'new') === activeInquiryFilter);
+    }
+
+    if (inquirySearchQuery) {
+      filtered = filtered.filter(i => {
+        const text = `${i.name || ''} ${i.email || ''} ${i.phone || ''} ${i.propertyTitle || ''} ${i.message || ''}`.toLowerCase();
+        return text.includes(inquirySearchQuery);
+      });
+    }
+
+    if (filtered.length === 0) {
+      container.innerHTML = `
+        <div class="py-14 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 p-8">
+          <div class="w-12 h-12 bg-white text-slate-400 rounded-xl flex items-center justify-center mx-auto mb-3 text-xl shadow-xs">
+            <i class="fa-solid fa-inbox"></i>
+          </div>
+          <h4 class="text-sm font-bold text-slate-800 mb-1">No Inquiries Found</h4>
+          <p class="text-xs text-slate-500 max-w-sm mx-auto">
+            ${inquirySearchQuery || activeInquiryFilter !== 'all' ? 'Try adjusting your search or tab filter.' : 'When clients submit a viewing request or ask about a property, their inquiry will appear here in real-time.'}
+          </p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = filtered.map(item => {
+      const status = item.status || 'new';
+      const statusStyles = {
+        new: 'bg-rose-50 text-rose-700 border-rose-200',
+        contacted: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        closed: 'bg-slate-100 text-slate-600 border-slate-200'
+      }[status] || 'bg-blue-50 text-blue-700 border-blue-200';
+
+      const statusLabels = {
+        new: 'New Inquiry',
+        contacted: 'Contacted',
+        closed: 'Closed'
+      }[status] || status;
+
+      const dateStr = item.createdAt 
+        ? new Date(item.createdAt).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })
+        : 'Recently';
+
+      return `
+        <div class="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md transition flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div class="flex-1 min-w-0 space-y-1.5">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider ${statusStyles}">
+                ${statusLabels}
+              </span>
+              <span class="text-[11px] text-slate-400 font-mono">ID: ${item.id}</span>
+              <span class="text-[11px] text-slate-400">• ${dateStr}</span>
+            </div>
+
+            <div class="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3">
+              <div class="text-sm font-extrabold text-slate-900">${item.name || 'Anonymous Client'}</div>
+              <div class="flex items-center gap-3 text-xs text-slate-600">
+                <a href="tel:${item.phone}" class="hover:text-blue-600 font-mono font-semibold flex items-center gap-1">
+                  <i class="fa-solid fa-phone text-blue-500 text-[10px]"></i> ${item.phone || 'No phone'}
+                </a>
+                <a href="mailto:${item.email}" class="hover:text-blue-600 flex items-center gap-1">
+                  <i class="fa-solid fa-envelope text-blue-500 text-[10px]"></i> ${item.email || 'No email'}
+                </a>
+              </div>
+            </div>
+
+            <!-- Linked Property Badge -->
+            <div class="flex items-center gap-2 p-2 rounded-xl bg-slate-50 border border-slate-100 text-xs">
+              ${item.propertyImage ? `<img src="${item.propertyImage}" class="w-10 h-8 rounded-lg object-cover flex-shrink-0">` : ''}
+              <div class="flex-1 min-w-0">
+                <div class="font-bold text-slate-800 truncate">${item.propertyTitle || 'Property Inquiry'}</div>
+                <div class="text-[11px] text-slate-500 truncate">${item.propertyAddress || ''} ${item.propertyPrice ? `• ₱${item.propertyPrice.toLocaleString()}` : ''}</div>
+              </div>
+              ${item.listingId ? `
+                <button onclick="MLSApp.openDetailModal('${item.listingId}')" class="px-2 py-1 bg-white hover:bg-blue-50 text-blue-600 rounded-lg border border-slate-200 font-bold text-[11px] transition whitespace-nowrap">
+                  View House
+                </button>
+              ` : ''}
+            </div>
+
+            ${item.date ? `
+              <div class="text-[11px] text-indigo-700 bg-indigo-50/70 px-2.5 py-1 rounded-lg border border-indigo-100 inline-flex items-center gap-1.5 font-medium">
+                <i class="fa-regular fa-calendar-check text-indigo-600"></i>
+                <span>Requested Viewing Schedule: <strong>${new Date(item.date).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}</strong></span>
+              </div>
+            ` : ''}
+
+            ${item.message ? `
+              <p class="text-xs text-slate-600 bg-slate-50/50 p-2 rounded-lg border border-slate-100/80 italic">
+                "${item.message}"
+              </p>
+            ` : ''}
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex flex-row md:flex-col items-center md:items-end justify-between w-full md:w-auto gap-2 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100">
+            <div class="flex items-center gap-1.5">
+              <select onchange="MLSApp.setInquiryStatus('${item.id}', this.value)" 
+                      class="px-2 py-1 rounded-lg border border-slate-200 text-xs font-bold bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs">
+                <option value="new" ${status === 'new' ? 'selected' : ''}>Mark as New</option>
+                <option value="contacted" ${status === 'contacted' ? 'selected' : ''}>Mark as Contacted</option>
+                <option value="closed" ${status === 'closed' ? 'selected' : ''}>Mark as Closed</option>
+              </select>
+
+              <a href="tel:${item.phone}" 
+                 class="w-7 h-7 rounded-lg bg-emerald-100 hover:bg-emerald-600 text-emerald-700 hover:text-white flex items-center justify-center transition"
+                 title="Call Client">
+                <i class="fa-solid fa-phone text-xs"></i>
+              </a>
+
+              <a href="mailto:${item.email}?subject=Regarding%20your%20inquiry%20for%20${encodeURIComponent(item.propertyTitle || 'Iligan MLS Listing')}" 
+                 class="w-7 h-7 rounded-lg bg-blue-100 hover:bg-blue-600 text-blue-700 hover:text-white flex items-center justify-center transition"
+                 title="Email Client">
+                <i class="fa-solid fa-envelope text-xs"></i>
+              </a>
+
+              <button onclick="MLSApp.confirmDeleteInquiry('${item.id}')" 
+                      class="w-7 h-7 rounded-lg bg-rose-100 hover:bg-rose-600 text-rose-700 hover:text-white flex items-center justify-center transition"
+                      title="Delete Lead">
+                <i class="fa-solid fa-trash text-xs"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function setInquiryStatus(id, newStatus) {
+    MLSStore.updateInquiryStatus(id, newStatus);
+    const inq = inquiries.find(i => i.id === id);
+    if (inq) inq.status = newStatus;
+    updateInquiryBadges();
+    renderInquiriesList();
+    showToast(`Inquiry marked as: ${newStatus}`, 'info');
+  }
+
+  function confirmDeleteInquiry(id) {
+    if (confirm('Are you sure you want to delete this client inquiry?')) {
+      MLSStore.deleteInquiry(id);
+      inquiries = inquiries.filter(i => i.id !== id);
+      updateInquiryBadges();
+      renderInquiriesList();
+      showToast('Client inquiry deleted.', 'info');
+    }
   }
 
   // View Mode switching (Split, Grid, Map)
@@ -1772,6 +2186,13 @@ const MLSApp = (function() {
         }
       });
     }
+
+    // Subscribe to real-time Cloud Firestore updates for Client Inquiries
+    if (typeof FirebaseModule !== 'undefined' && FirebaseModule.subscribeToInquiries) {
+      FirebaseModule.subscribeToInquiries((cloudInquiries) => {
+        handleInquiriesUpdate(cloudInquiries);
+      });
+    }
   }
 
   return {
@@ -1794,6 +2215,13 @@ const MLSApp = (function() {
     confirmDeleteListing,
     clearAllData,
     resetDemoData,
+    openInquiriesModal,
+    closeInquiriesModal,
+    filterInquiries,
+    handleInquirySearch,
+    setInquiryStatus,
+    confirmDeleteInquiry,
+    requestDesktopNotifications,
     searchAddressOnMap,
     locateGpsAndAutoFillAddress,
     autoFillAddressFromPin,

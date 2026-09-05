@@ -250,21 +250,81 @@ const FirebaseModule = (function() {
     return clearAllListings();
   }
 
+  let unsubscribeInquiries = null;
+
+  // Subscribe to real-time changes in Firestore collection 'inquiries'
+  function subscribeToInquiries(onUpdate) {
+    if (!db) return null;
+    try {
+      if (unsubscribeInquiries) unsubscribeInquiries();
+
+      unsubscribeInquiries = db.collection('inquiries').onSnapshot(snapshot => {
+        const cloudInquiries = [];
+        snapshot.forEach(doc => {
+          cloudInquiries.push(doc.data());
+        });
+        // Sort newest first
+        cloudInquiries.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        console.log(`[Firebase Firestore] Received ${cloudInquiries.length} inquiries in real-time.`);
+        if (typeof onUpdate === 'function') {
+          onUpdate(cloudInquiries);
+        }
+      }, error => {
+        console.warn('[Firebase Firestore] Inquiries listener notice:', error.message);
+      });
+
+      return unsubscribeInquiries;
+    } catch (e) {
+      console.error('[Firebase] Inquiries subscription failed:', e);
+      return null;
+    }
+  }
+
   // Save site viewing inquiry to Firestore collection 'inquiries'
   async function saveInquiry(inquiryData) {
     if (!db) return false;
     try {
-      const id = 'INQ-' + Date.now();
+      const id = inquiryData.id || ('INQ-' + Date.now());
       const payload = {
         ...inquiryData,
         id,
-        createdAt: new Date().toISOString()
+        status: inquiryData.status || 'new',
+        createdAt: inquiryData.createdAt || new Date().toISOString()
       };
-      await db.collection('inquiries').doc(id).set(payload);
+      await db.collection('inquiries').doc(id).set(payload, { merge: true });
       console.log('[Firebase Firestore] Viewing inquiry saved to cloud database:', id);
       return true;
     } catch (e) {
       console.warn('[Firebase Firestore] Failed to save viewing inquiry:', e.message);
+      return false;
+    }
+  }
+
+  // Update inquiry status (e.g. 'new', 'contacted', 'closed')
+  async function updateInquiryStatus(id, status) {
+    if (!db) return false;
+    try {
+      await db.collection('inquiries').doc(id).set({
+        status,
+        statusUpdatedAt: new Date().toISOString()
+      }, { merge: true });
+      console.log(`[Firebase Firestore] Inquiry ${id} status updated to: ${status}`);
+      return true;
+    } catch (e) {
+      console.warn(`[Firebase Firestore] Failed to update inquiry ${id} status:`, e.message);
+      return false;
+    }
+  }
+
+  // Delete inquiry from cloud database
+  async function deleteInquiry(id) {
+    if (!db) return false;
+    try {
+      await db.collection('inquiries').doc(id).delete();
+      console.log(`[Firebase Firestore] Inquiry ${id} deleted.`);
+      return true;
+    } catch (e) {
+      console.warn(`[Firebase Firestore] Failed to delete inquiry ${id}:`, e.message);
       return false;
     }
   }
@@ -279,7 +339,10 @@ const FirebaseModule = (function() {
     deleteListing,
     clearAllListings,
     resetToDefaults,
+    subscribeToInquiries,
     saveInquiry,
+    updateInquiryStatus,
+    deleteInquiry,
     updateStatusBadge
   };
 })();

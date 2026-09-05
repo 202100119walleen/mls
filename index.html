@@ -83,6 +83,16 @@
           <span>About</span>
         </a>
 
+        <!-- Client Inquiries / Leads Notification Button -->
+        <button onclick="MLSApp.openInquiriesModal()" 
+                id="navInquiryBtn"
+                class="relative px-3 py-2 bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-slate-200 shadow-sm"
+                title="View Client Inquiries & Viewing Leads">
+          <i class="fa-solid fa-bell text-blue-600"></i>
+          <span class="hidden sm:inline">Leads</span>
+          <span id="navInquiryBadge" class="hidden px-1.5 py-0.2 bg-rose-600 text-white font-extrabold text-[10px] rounded-full shadow-sm">0</span>
+        </button>
+
         <!-- Firebase Cloud Sync Status Badge -->
         <div class="firebase-status-badge hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200" title="Firebase Cloud Database Status">
           <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
@@ -127,6 +137,14 @@
           <div class="w-px h-3 bg-slate-700"></div>
           <div><span class="text-slate-400">Portfolio:</span> <strong id="realtorPortfolioValue" class="text-white">₱0</strong></div>
         </div>
+
+        <button onclick="MLSApp.openInquiriesModal()" 
+                id="realtorInquiriesBtn"
+                class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition flex items-center gap-1.5 shadow-sm">
+          <i class="fa-solid fa-inbox"></i>
+          <span>Client Leads</span>
+          <span id="realtorInquiryBadge" class="hidden px-1.5 py-0.2 bg-amber-400 text-slate-950 font-black text-[10px] rounded-full">0</span>
+        </button>
 
         <button onclick="MLSApp.openAddModal()" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg transition flex items-center gap-1 shadow-sm">
           <i class="fa-solid fa-plus"></i> New Property
@@ -1177,6 +1195,89 @@
           </button>
         </div>
       </form>
+
+    </div>
+  </div>
+
+  <!-- ==================================================== -->
+  <!-- MODAL: CLIENT INQUIRIES & VIEWING LEADS (ADMIN)     -->
+  <!-- ==================================================== -->
+  <div id="inquiriesModal" 
+       style="z-index: 9998;" 
+       class="fixed inset-0 hidden items-center justify-center p-4 sm:p-6 bg-slate-950/75 backdrop-blur-sm overflow-y-auto"
+       onclick="if(event.target === this) MLSApp.closeInquiriesModal()">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[92vh] flex flex-col overflow-hidden animate-modal border border-slate-100 relative z-10">
+      
+      <!-- Header -->
+      <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center text-base">
+            <i class="fa-solid fa-inbox"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="text-base font-bold text-white">Client Inquiries & Viewing Leads</h3>
+              <span id="modalInquiryUnreadPill" class="px-2 py-0.5 bg-rose-600 text-white text-[10px] font-extrabold rounded-full hidden">0 New</span>
+            </div>
+            <p class="text-xs text-slate-400">Real-time incoming leads from interested property buyers and renters</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="MLSApp.requestDesktopNotifications()" 
+                  id="enableAlertsBtn"
+                  class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold transition flex items-center gap-1.5"
+                  title="Enable browser push alerts for new inquiries">
+            <i class="fa-solid fa-bell"></i>
+            <span class="hidden sm:inline">Desktop Alerts</span>
+          </button>
+          <button onclick="MLSApp.closeInquiriesModal()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition">
+            <i class="fa-solid fa-xmark text-sm"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Filter & Search Toolbar -->
+      <div class="px-6 py-3 bg-slate-50 border-b border-slate-200/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0" id="inquiryStatusTabs">
+          <button onclick="MLSApp.filterInquiries('all')" id="tabInqAll" class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-blue-600 text-white shadow-xs">
+            All (<span id="countInqAll">0</span>)
+          </button>
+          <button onclick="MLSApp.filterInquiries('new')" id="tabInqNew" class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-white text-slate-600 hover:bg-slate-100 border border-slate-200">
+            New (<span id="countInqNew">0</span>)
+          </button>
+          <button onclick="MLSApp.filterInquiries('contacted')" id="tabInqContacted" class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-white text-slate-600 hover:bg-slate-100 border border-slate-200">
+            Contacted (<span id="countInqContacted">0</span>)
+          </button>
+          <button onclick="MLSApp.filterInquiries('closed')" id="tabInqClosed" class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-white text-slate-600 hover:bg-slate-100 border border-slate-200">
+            Closed (<span id="countInqClosed">0</span>)
+          </button>
+        </div>
+
+        <div class="relative min-w-[220px]">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+          <input type="text" 
+                 id="inquirySearchInput" 
+                 oninput="MLSApp.handleInquirySearch(this.value)"
+                 placeholder="Search client name, phone..." 
+                 class="w-full pl-8 pr-3 py-1.5 text-xs bg-white rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600">
+        </div>
+      </div>
+
+      <!-- Inquiries Content / List -->
+      <div id="inquiriesListContainer" class="p-6 overflow-y-auto flex-1 space-y-3">
+        <!-- Inquiries cards rendered dynamically via JS -->
+      </div>
+
+      <!-- Footer Bar -->
+      <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span>Live Firestore Sync Connected</span>
+        </div>
+        <button onclick="MLSApp.closeInquiriesModal()" class="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition">
+          Close
+        </button>
+      </div>
 
     </div>
   </div>

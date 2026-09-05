@@ -144,11 +144,77 @@ const MLSStore = {
     return this.clearAllListings();
   },
 
-  // Save viewing inquiry into Firestore
-  saveViewingInquiry: function(inquiryData) {
-    if (typeof FirebaseModule !== 'undefined' && FirebaseModule.saveInquiry) {
-      FirebaseModule.saveInquiry(inquiryData);
+  // Inquiries Store Management
+  getInquiries: function() {
+    try {
+      const stored = localStorage.getItem('jobacs_mls_inquiries_v1');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {
+      console.error('Error reading localStorage inquiries:', e);
     }
+    return [];
+  },
+
+  saveAllInquiries: function(inquiries) {
+    try {
+      localStorage.setItem('jobacs_mls_inquiries_v1', JSON.stringify(inquiries || []));
+    } catch (e) {
+      console.error('Error saving inquiries to localStorage:', e);
+    }
+  },
+
+  // Save viewing inquiry into LocalStorage and Cloud Firestore
+  saveViewingInquiry: function(inquiryData) {
+    const list = this.getInquiries();
+    const id = inquiryData.id || ('INQ-' + Date.now());
+    const payload = {
+      ...inquiryData,
+      id,
+      status: inquiryData.status || 'new',
+      createdAt: inquiryData.createdAt || new Date().toISOString()
+    };
+    
+    // Add to front of array
+    list.unshift(payload);
+    this.saveAllInquiries(list);
+
+    // Sync to Cloud Firestore
+    if (typeof FirebaseModule !== 'undefined' && FirebaseModule.saveInquiry) {
+      FirebaseModule.saveInquiry(payload);
+    }
+
+    return payload;
+  },
+
+  // Update status of an inquiry ('new', 'contacted', 'closed')
+  updateInquiryStatus: function(id, status) {
+    const list = this.getInquiries();
+    const item = list.find(i => i.id === id);
+    if (item) {
+      item.status = status;
+      item.statusUpdatedAt = new Date().toISOString();
+      this.saveAllInquiries(list);
+    }
+
+    if (typeof FirebaseModule !== 'undefined' && FirebaseModule.updateInquiryStatus) {
+      FirebaseModule.updateInquiryStatus(id, status);
+    }
+    return list;
+  },
+
+  // Delete an inquiry
+  deleteInquiry: function(id) {
+    let list = this.getInquiries();
+    list = list.filter(i => i.id !== id);
+    this.saveAllInquiries(list);
+
+    if (typeof FirebaseModule !== 'undefined' && FirebaseModule.deleteInquiry) {
+      FirebaseModule.deleteInquiry(id);
+    }
+    return list;
   }
 };
 
