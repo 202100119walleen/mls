@@ -351,9 +351,21 @@ const MLSApp = (function() {
                   </button>
                 </div>
               ` : `
-                <button class="text-xs font-bold text-blue-600 group-hover:text-blue-700 flex items-center gap-1">
-                  Details <i class="fa-solid fa-arrow-right text-[10px] transition-transform group-hover:translate-x-0.5"></i>
-                </button>
+                <div class="flex items-center gap-1.5" onclick="event.stopPropagation()">
+                  <button onclick="MLSApp.initiateCall('${item.realtor ? item.realtor.phone : '+63 917 555 2890'}', '${item.realtor ? item.realtor.name.replace(/'/g, "\\'") : 'Broker Alex Vance'}', '${item.title.replace(/'/g, "\\'")}', 'Listing Broker')" 
+                          class="w-7 h-7 rounded-lg bg-emerald-100 hover:bg-emerald-600 text-emerald-700 hover:text-white flex items-center justify-center transition shadow-2xs"
+                          title="Call Broker">
+                    <i class="fa-solid fa-phone text-xs"></i>
+                  </button>
+                  <button onclick="MLSApp.initiateEmail('${item.realtor ? item.realtor.email : 'broker@iliganmls.ph'}', '${item.realtor ? item.realtor.name.replace(/'/g, "\\'") : 'Broker Alex Vance'}', '${item.title.replace(/'/g, "\\'")}', '${item.id}')" 
+                          class="w-7 h-7 rounded-lg bg-blue-100 hover:bg-blue-600 text-blue-700 hover:text-white flex items-center justify-center transition shadow-2xs"
+                          title="Email Broker">
+                    <i class="fa-solid fa-envelope text-xs"></i>
+                  </button>
+                  <button onclick="MLSApp.openDetailModal('${item.id}')" class="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 ml-1">
+                    Details <i class="fa-solid fa-arrow-right text-[10px] transition-transform group-hover:translate-x-0.5"></i>
+                  </button>
+                </div>
               `}
             </div>
           </div>
@@ -626,10 +638,20 @@ const MLSApp = (function() {
                 <div class="text-xs text-blue-400 font-mono mt-0.5">${listing.realtor ? listing.realtor.phone : '+63 917 555 2890'}</div>
               </div>
             </div>
-            <button onclick="MLSApp.openTourModal('${listing.id}')" 
-                    class="px-4 py-2 bg-white hover:bg-slate-100 text-slate-900 rounded-xl text-xs font-bold transition">
-              Inquire Now
-            </button>
+            <div class="flex flex-wrap items-center gap-2">
+              <button onclick="MLSApp.initiateCall('${listing.realtor ? listing.realtor.phone : '+63 917 555 2890'}', '${listing.realtor ? listing.realtor.name.replace(/'/g, "\\'") : 'Engr. Alex Vance'}', '${listing.title.replace(/'/g, "\\'")}', 'Realtor Broker')" 
+                      class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+                <i class="fa-solid fa-phone"></i> Call Broker
+              </button>
+              <button onclick="MLSApp.initiateEmail('${listing.realtor ? listing.realtor.email : 'broker@iliganmls.ph'}', '${listing.realtor ? listing.realtor.name.replace(/'/g, "\\'") : 'Engr. Alex Vance'}', '${listing.title.replace(/'/g, "\\'")}', '${listing.id}')" 
+                      class="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+                <i class="fa-solid fa-envelope"></i> Email
+              </button>
+              <button onclick="MLSApp.openTourModal('${listing.id}')" 
+                      class="px-4 py-2 bg-white hover:bg-slate-100 text-slate-900 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
+                <i class="fa-regular fa-calendar-check"></i> Inquire Now
+              </button>
+            </div>
           </div>
 
         </div>
@@ -1874,17 +1896,17 @@ const MLSApp = (function() {
                 <option value="closed" ${status === 'closed' ? 'selected' : ''}>Mark as Closed</option>
               </select>
 
-              <a href="tel:${item.phone}" 
+              <button onclick="MLSApp.initiateCall('${item.phone || ''}', '${(item.name || 'Client').replace(/'/g, "\\'")}', '${(item.propertyTitle || 'Property Inquiry').replace(/'/g, "\\'")}', 'Inquiring Client')" 
                  class="w-7 h-7 rounded-lg bg-emerald-100 hover:bg-emerald-600 text-emerald-700 hover:text-white flex items-center justify-center transition"
-                 title="Call Client">
+                 title="Call Client via API">
                 <i class="fa-solid fa-phone text-xs"></i>
-              </a>
+              </button>
 
-              <a href="mailto:${item.email}?subject=Regarding%20your%20inquiry%20for%20${encodeURIComponent(item.propertyTitle || 'Iligan MLS Listing')}" 
+              <button onclick="MLSApp.initiateEmail('${item.email || ''}', '${(item.name || 'Client').replace(/'/g, "\\'")}', '${(item.propertyTitle || 'Property Inquiry').replace(/'/g, "\\'")}', '${item.listingId || ''}')" 
                  class="w-7 h-7 rounded-lg bg-blue-100 hover:bg-blue-600 text-blue-700 hover:text-white flex items-center justify-center transition"
-                 title="Email Client">
+                 title="Email Client via API">
                 <i class="fa-solid fa-envelope text-xs"></i>
-              </a>
+              </button>
 
               <button onclick="MLSApp.confirmDeleteInquiry('${item.id}')" 
                       class="w-7 h-7 rounded-lg bg-rose-100 hover:bg-rose-600 text-rose-700 hover:text-white flex items-center justify-center transition"
@@ -1915,6 +1937,275 @@ const MLSApp = (function() {
       renderInquiriesList();
       showToast('Client inquiry deleted.', 'info');
     }
+  }
+
+  // ==========================================================
+  // CLIENT & REALTOR CALL & EMAIL WEB APIS
+  // ==========================================================
+  let activeCallData = { phone: '', name: '', propertyTitle: '', role: '' };
+  let activeEmailData = { email: '', name: '', propertyTitle: '', listingId: '' };
+
+  // Play telephone dial tone using Web Audio API
+  function playDialTone() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+
+      // DTMF touch-tone dual frequency simulation (941Hz + 1336Hz)
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc1.frequency.setValueAtTime(941, now);
+      osc2.frequency.setValueAtTime(1336, now);
+
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + 0.35);
+      osc2.stop(now + 0.35);
+    } catch(e) {
+      console.log('Dial tone audio notice:', e);
+    }
+  }
+
+  function onDialTriggered() {
+    playDialTone();
+    showToast(`Connecting dialer to ${activeCallData.phone || 'recipient'}...`, 'info');
+  }
+
+  // Sanitize Philippine mobile number to E.164 international format for WhatsApp API
+  function sanitizeForWhatsApp(phone) {
+    if (!phone) return '';
+    let digits = phone.replace(/[^0-9]/g, '');
+    if (digits.startsWith('09')) {
+      digits = '63' + digits.substring(1);
+    } else if (digits.startsWith('9') && digits.length === 10) {
+      digits = '63' + digits;
+    }
+    return digits;
+  }
+
+  // Initiate Call Action Modal
+  function initiateCall(phone, name, propertyTitle, role = 'Realtor Broker') {
+    activeCallData = { 
+      phone: phone || '+63 917 555 2890', 
+      name: name || 'Realtor Broker', 
+      propertyTitle: propertyTitle || 'Iligan MLS Property', 
+      role: role || 'Contact' 
+    };
+    
+    const modal = document.getElementById('callModal');
+    if (!modal) return;
+
+    const roleEl = document.getElementById('callContactRole');
+    if (roleEl) roleEl.innerText = activeCallData.role;
+
+    const nameEl = document.getElementById('callContactName');
+    if (nameEl) nameEl.innerText = activeCallData.name;
+
+    const propEl = document.getElementById('callPropertyContext');
+    if (propEl) propEl.innerText = `Regarding: ${activeCallData.propertyTitle}`;
+
+    const phoneDisplayEl = document.getElementById('callPhoneNumberDisplay');
+    if (phoneDisplayEl) phoneDisplayEl.innerText = activeCallData.phone;
+
+    // Direct tel: URI
+    const dialBtn = document.getElementById('callDialNowBtn');
+    if (dialBtn) {
+      const cleanTel = activeCallData.phone.replace(/[^0-9+]/g, '');
+      dialBtn.href = `tel:${cleanTel}`;
+    }
+
+    // WhatsApp Direct API
+    const waBtn = document.getElementById('callWhatsAppBtn');
+    if (waBtn) {
+      const waDigits = sanitizeForWhatsApp(activeCallData.phone);
+      const waMessage = encodeURIComponent(`Hello ${activeCallData.name}, I am inquiring regarding "${activeCallData.propertyTitle}" listed on Iligan City MLS.`);
+      waBtn.href = `https://api.whatsapp.com/send?phone=${waDigits}&text=${waMessage}`;
+    }
+
+    // SMS URI
+    const smsBtn = document.getElementById('callSmsBtn');
+    if (smsBtn) {
+      const cleanTel = activeCallData.phone.replace(/[^0-9+]/g, '');
+      smsBtn.href = `sms:${cleanTel}`;
+    }
+
+    // Reset copy button label
+    const copyLabel = document.getElementById('callCopyLabel');
+    if (copyLabel) copyLabel.innerText = 'Copy';
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+
+  function closeCallModal() {
+    const modal = document.getElementById('callModal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+  }
+
+  function copyPhoneNumber() {
+    if (!activeCallData.phone) return;
+    navigator.clipboard.writeText(activeCallData.phone).then(() => {
+      const copyLabel = document.getElementById('callCopyLabel');
+      if (copyLabel) copyLabel.innerHTML = '<span class="text-emerald-600 font-bold">Copied!</span>';
+      showToast(`Copied phone number: ${activeCallData.phone}`, 'success');
+      setTimeout(() => {
+        if (copyLabel) copyLabel.innerText = 'Copy';
+      }, 2000);
+    }).catch(() => {
+      showToast(`Phone number: ${activeCallData.phone}`, 'info');
+    });
+  }
+
+  // Initiate Email Action Modal
+  function initiateEmail(email, name, propertyTitle, listingId = '') {
+    activeEmailData = { 
+      email: email || 'broker@iliganmls.ph', 
+      name: name || 'Realtor Broker', 
+      propertyTitle: propertyTitle || 'Iligan MLS Property',
+      listingId: listingId || ''
+    };
+
+    const modal = document.getElementById('emailModal');
+    if (!modal) return;
+
+    const recipientName = document.getElementById('emailRecipientName');
+    if (recipientName) recipientName.innerText = activeEmailData.name;
+
+    const recipientAddr = document.getElementById('emailRecipientAddress');
+    if (recipientAddr) recipientAddr.innerText = activeEmailData.email;
+
+    const listingInput = document.getElementById('emailListingId');
+    if (listingInput) listingInput.value = activeEmailData.listingId;
+
+    const subjectInput = document.getElementById('emailSubjectInput');
+    if (subjectInput) {
+      subjectInput.value = `Inquiry regarding: ${activeEmailData.propertyTitle}`;
+    }
+
+    const bodyInput = document.getElementById('emailBodyInput');
+    if (bodyInput) {
+      bodyInput.value = `Hello ${activeEmailData.name},\n\nI am interested in "${activeEmailData.propertyTitle}". Could you please provide more information, brochure specs, and available dates for site viewing?\n\nThank you!`;
+    }
+
+    // Default mailto link
+    updateMailtoLink();
+
+    // Reset copy button
+    const copyEmailLabel = document.getElementById('copyEmailLabel');
+    if (copyEmailLabel) copyEmailLabel.innerText = 'Copy';
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+
+  function closeEmailModal() {
+    const modal = document.getElementById('emailModal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+  }
+
+  function copyEmailAddress() {
+    if (!activeEmailData.email) return;
+    navigator.clipboard.writeText(activeEmailData.email).then(() => {
+      const copyEmailLabel = document.getElementById('copyEmailLabel');
+      if (copyEmailLabel) copyEmailLabel.innerHTML = '<span class="text-emerald-600 font-bold">Copied!</span>';
+      showToast(`Copied email address: ${activeEmailData.email}`, 'success');
+      setTimeout(() => {
+        if (copyEmailLabel) copyEmailLabel.innerText = 'Copy';
+      }, 2000);
+    }).catch(() => {
+      showToast(`Email: ${activeEmailData.email}`, 'info');
+    });
+  }
+
+  function updateMailtoLink() {
+    const mailtoBtn = document.getElementById('emailMailtoLink');
+    if (!mailtoBtn) return;
+    const to = activeEmailData.email || 'broker@iliganmls.ph';
+    const subject = document.getElementById('emailSubjectInput')?.value || `Inquiry on ${activeEmailData.propertyTitle}`;
+    const body = document.getElementById('emailBodyInput')?.value || '';
+    mailtoBtn.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  }
+
+  // Open Gmail Web API
+  function openInGmailWeb() {
+    const to = activeEmailData.email || 'broker@iliganmls.ph';
+    const subject = document.getElementById('emailSubjectInput')?.value || `Inquiry regarding ${activeEmailData.propertyTitle}`;
+    const body = document.getElementById('emailBodyInput')?.value || '';
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(gmailUrl, '_blank');
+    showToast('Opening Gmail Web composer...', 'info');
+  }
+
+  // Open Outlook Live Web API
+  function openInOutlookWeb() {
+    const to = activeEmailData.email || 'broker@iliganmls.ph';
+    const subject = document.getElementById('emailSubjectInput')?.value || `Inquiry regarding ${activeEmailData.propertyTitle}`;
+    const body = document.getElementById('emailBodyInput')?.value || '';
+    const outlookUrl = `https://outlook.live.com/mail/0/deeplink/compose?to=${encodeURIComponent(to)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(outlookUrl, '_blank');
+    showToast('Opening Outlook Web composer...', 'info');
+  }
+
+  // Handle direct Send Email via Cloud Firestore API
+  async function handleSendEmail(e) {
+    if (e) e.preventDefault();
+
+    const senderName = document.getElementById('emailSenderName')?.value.trim() || 'Interested Buyer';
+    const senderEmail = document.getElementById('emailSenderAddress')?.value.trim() || '';
+    const senderPhone = document.getElementById('emailSenderPhone')?.value.trim() || '';
+    const subject = document.getElementById('emailSubjectInput')?.value.trim() || `Inquiry regarding ${activeEmailData.propertyTitle}`;
+    const message = document.getElementById('emailBodyInput')?.value.trim() || '';
+    const listingId = document.getElementById('emailListingId')?.value || activeEmailData.listingId || '';
+
+    const listing = listings.find(item => item.id === listingId);
+
+    const emailInquiryPayload = {
+      id: 'INQ-' + Date.now(),
+      listingId: listingId,
+      propertyTitle: activeEmailData.propertyTitle || (listing ? listing.title : 'General Inquiry'),
+      propertyPrice: listing ? listing.price : null,
+      propertyAddress: listing ? `${listing.address}, ${listing.city}` : '',
+      propertyImage: (listing && listing.images && listing.images[0]) || '',
+      name: senderName,
+      email: senderEmail,
+      phone: senderPhone,
+      subject: subject,
+      message: message,
+      source: 'email_api_modal',
+      recipientEmail: activeEmailData.email,
+      status: 'new',
+      createdAt: new Date().toISOString()
+    };
+
+    // Save directly to Firebase Cloud Firestore and Local Cache
+    MLSStore.saveViewingInquiry(emailInquiryPayload);
+
+    // Play notification chime
+    playNotificationChime();
+
+    closeEmailModal();
+
+    const form = document.getElementById('emailComposeForm');
+    if (form) form.reset();
+
+    showToast(`Email message sent to ${activeEmailData.name}! Lead logged to Cloud Firestore.`, 'success');
   }
 
   // View Mode switching (Split, Grid, Map)
@@ -2235,6 +2526,16 @@ const MLSApp = (function() {
     removeEditorImage,
     openTourModal,
     closeTourModal,
+    initiateCall,
+    closeCallModal,
+    copyPhoneNumber,
+    onDialTriggered,
+    initiateEmail,
+    closeEmailModal,
+    copyEmailAddress,
+    openInGmailWeb,
+    openInOutlookWeb,
+    handleSendEmail,
     setViewMode,
     resetFilters,
     showToast

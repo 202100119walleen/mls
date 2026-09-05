@@ -386,12 +386,21 @@
           </div>
         </div>
 
-        <!-- Discreet Realtor Portal Button (Password Protected) -->
-        <div class="flex items-center gap-3 w-full md:w-auto justify-end border-t md:border-t-0 pt-4 md:pt-0 border-slate-800">
-          <span class="text-[11px] text-slate-500 hidden sm:inline">Authorized Staff:</span>
+        <!-- Client direct Call & Email buttons for general brokerage inquiries -->
+        <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end border-t md:border-t-0 pt-4 md:pt-0 border-slate-800">
+          <button onclick="MLSApp.initiateCall('+63 917 555 2890', 'Iligan MLS Brokerage Desk', 'General Property Inquiry')" 
+                  class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm">
+            <i class="fa-solid fa-phone"></i>
+            <span>Call Office</span>
+          </button>
+          <button onclick="MLSApp.initiateEmail('broker@iliganmls.ph', 'Iligan MLS Brokerage Desk', 'General Property Inquiry')" 
+                  class="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm">
+            <i class="fa-solid fa-envelope"></i>
+            <span>Email Us</span>
+          </button>
           <button id="toggleRealtorBtn" 
                   onclick="MLSApp.promptRealtorLogin()" 
-                  class="px-4 py-2 bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white rounded-xl text-xs font-bold transition flex items-center gap-2 border border-slate-700/80 shadow-sm"
+                  class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-bold transition flex items-center gap-2 border border-slate-700/80 shadow-sm"
                   title="Authorized Realtor & Broker Portal (Password Protected)">
             <i class="fa-solid fa-user-tie text-blue-400"></i>
             <span>Realtor Portal</span>
@@ -1279,6 +1288,244 @@
         </button>
       </div>
 
+    </div>
+  </div>
+
+  <!-- ==================================================== -->
+  <!-- MODAL: INSTANT CALL & PHONE CONNECT (WEB APIS)      -->
+  <!-- ==================================================== -->
+  <div id="callModal" 
+       style="z-index: 9999;" 
+       class="fixed inset-0 hidden items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-sm overflow-y-auto"
+       onclick="if(event.target === this) MLSApp.closeCallModal()">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-modal border border-slate-100 relative z-10">
+      <!-- Header -->
+      <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-phone"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white">Call & Phone Connect</h3>
+            <p class="text-xs text-slate-400">Direct dialer & messaging APIs</p>
+          </div>
+        </div>
+        <button onclick="MLSApp.closeCallModal()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="p-6 text-center space-y-4">
+        <div>
+          <span id="callContactRole" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+            Realtor Broker
+          </span>
+          <h4 id="callContactName" class="text-lg font-extrabold text-slate-900 mt-1">Engr. Alex Vance</h4>
+          <p id="callPropertyContext" class="text-xs text-slate-500 line-clamp-1 mt-0.5">Regarding property inquiry</p>
+        </div>
+
+        <!-- Phone Big Digits Display -->
+        <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex items-center justify-between">
+          <div class="text-left min-w-0 pr-2">
+            <span class="text-[10px] text-slate-400 font-semibold uppercase block">Phone Number</span>
+            <div id="callPhoneNumberDisplay" class="text-lg sm:text-xl font-black font-mono text-slate-900 tracking-wide truncate">+63 917 555 2890</div>
+          </div>
+          <button onclick="MLSApp.copyPhoneNumber()" 
+                  id="callCopyBtn"
+                  class="px-3 py-2 bg-white hover:bg-slate-100 text-slate-700 rounded-xl border border-slate-200 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs flex-shrink-0">
+            <i class="fa-regular fa-copy"></i>
+            <span id="callCopyLabel">Copy</span>
+          </button>
+        </div>
+
+        <!-- Action API Buttons -->
+        <div class="space-y-2.5 pt-2">
+          <!-- Dial Now Direct via tel: -->
+          <a id="callDialNowBtn" 
+             href="tel:+639175552890" 
+             onclick="MLSApp.onDialTriggered()" 
+             class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold transition shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2">
+            <i class="fa-solid fa-phone-volume"></i>
+            <span>Dial Number (Phone / Dialer)</span>
+          </a>
+
+          <!-- WhatsApp Web / App API -->
+          <a id="callWhatsAppBtn" 
+             href="https://api.whatsapp.com/send?phone=639175552890" 
+             target="_blank" 
+             class="w-full py-3 px-4 bg-[#25D366] hover:bg-[#20ba59] text-white rounded-xl text-sm font-bold transition shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2">
+            <i class="fa-brands fa-whatsapp text-lg"></i>
+            <span>Open in WhatsApp (Chat & Call)</span>
+          </a>
+
+          <!-- SMS Fallback on mobile -->
+          <a id="callSmsBtn" 
+             href="sms:+639175552890" 
+             class="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-comment-sms"></i>
+            <span>Send Direct SMS Text</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
+        <span class="flex items-center gap-1.5">
+          <i class="fa-solid fa-signal text-emerald-500"></i>
+          Telephony & Messaging API
+        </span>
+        <button onclick="MLSApp.closeCallModal()" class="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================== -->
+  <!-- MODAL: INSTANT EMAIL & MESSAGE COMPOSER (WEB APIS)   -->
+  <!-- ==================================================== -->
+  <div id="emailModal" 
+       style="z-index: 9999;" 
+       class="fixed inset-0 hidden items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-sm overflow-y-auto"
+       onclick="if(event.target === this) MLSApp.closeEmailModal()">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-xl w-full max-h-[92vh] flex flex-col overflow-hidden animate-modal border border-slate-100 relative z-10">
+      <!-- Header -->
+      <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-envelope"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white">Send Email Inquiry</h3>
+            <p class="text-xs text-slate-400">Direct cloud messaging & webmail APIs</p>
+          </div>
+        </div>
+        <button onclick="MLSApp.closeEmailModal()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+
+      <!-- Body / Form -->
+      <form id="emailComposeForm" onsubmit="MLSApp.handleSendEmail(event)" class="p-6 overflow-y-auto flex-1 space-y-4 text-xs">
+        <input type="hidden" id="emailListingId" value="">
+        
+        <!-- Recipient Bar -->
+        <div class="p-3.5 bg-blue-50/70 rounded-2xl border border-blue-100 flex items-center justify-between">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <div class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
+              <i class="fa-solid fa-user-check"></i>
+            </div>
+            <div class="min-w-0">
+              <span class="text-[10px] uppercase font-bold text-blue-600 tracking-wider block">Recipient</span>
+              <div class="font-extrabold text-slate-900 truncate" id="emailRecipientName">Broker Alex Vance</div>
+              <div class="text-[11px] text-blue-700 font-mono truncate" id="emailRecipientAddress">broker@iliganmls.ph</div>
+            </div>
+          </div>
+          <button type="button" onclick="MLSApp.copyEmailAddress()" id="copyEmailBtn" class="px-2.5 py-1.5 bg-white hover:bg-blue-100 text-blue-700 rounded-lg border border-blue-200 font-bold text-[11px] transition flex items-center gap-1 flex-shrink-0">
+            <i class="fa-regular fa-copy"></i>
+            <span id="copyEmailLabel">Copy</span>
+          </button>
+        </div>
+
+        <!-- Pre-filled Subject -->
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Subject</label>
+          <input type="text" 
+                 id="emailSubjectInput" 
+                 required 
+                 class="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none font-semibold text-slate-800">
+        </div>
+
+        <!-- Sender info -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Your Full Name</label>
+            <input type="text" 
+                   id="emailSenderName" 
+                   placeholder="e.g. Maria Santos" 
+                   required 
+                   class="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none text-slate-800">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Your Email Address</label>
+            <input type="email" 
+                   id="emailSenderAddress" 
+                   placeholder="e.g. maria@example.com" 
+                   required 
+                   class="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none text-slate-800">
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Your Phone / Mobile Number (Optional)</label>
+          <input type="tel" 
+                 id="emailSenderPhone" 
+                 placeholder="e.g. 0917 123 4567" 
+                 class="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none font-mono text-slate-800">
+        </div>
+
+        <!-- Message Body -->
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Message</label>
+          <textarea id="emailBodyInput" 
+                    rows="4" 
+                    required 
+                    class="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none text-slate-800 resize-none"></textarea>
+        </div>
+
+        <!-- Primary Action: In-App Cloud Send -->
+        <button type="submit" 
+                id="emailSendSubmitBtn"
+                class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 text-sm">
+          <i class="fa-solid fa-paper-plane"></i>
+          <span>Send Inquiry via Cloud API</span>
+        </button>
+
+        <!-- Or Webmail API 1-Click Launchers -->
+        <div class="pt-3 border-t border-slate-100">
+          <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-2 text-center">
+            Or Open Directly In Your Favorite Webmail App
+          </span>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <!-- Gmail Web API -->
+            <button type="button" 
+                    onclick="MLSApp.openInGmailWeb()" 
+                    class="py-2 px-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl font-bold text-[11px] transition flex items-center justify-center gap-1.5 shadow-2xs">
+              <i class="fa-brands fa-google text-rose-600"></i>
+              <span>Gmail Web</span>
+            </button>
+            
+            <!-- Outlook Web API -->
+            <button type="button" 
+                    onclick="MLSApp.openInOutlookWeb()" 
+                    class="py-2 px-2.5 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 rounded-xl font-bold text-[11px] transition flex items-center justify-center gap-1.5 shadow-2xs">
+              <i class="fa-brands fa-microsoft text-sky-600"></i>
+              <span>Outlook Web</span>
+            </button>
+
+            <!-- Default Desktop App (mailto) -->
+            <a id="emailMailtoLink" 
+               href="#" 
+               class="py-2 px-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl font-bold text-[11px] transition flex items-center justify-center gap-1.5 shadow-2xs">
+              <i class="fa-solid fa-arrow-up-right-from-square text-slate-500"></i>
+              <span>Default App</span>
+            </a>
+          </div>
+        </div>
+
+      </form>
+
+      <!-- Footer -->
+      <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
+        <span class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+          Direct Cloud Firestore & Webmail API
+        </span>
+        <button type="button" onclick="MLSApp.closeEmailModal()" class="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition">
+          Close
+        </button>
+      </div>
     </div>
   </div>
 
