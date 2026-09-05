@@ -1437,10 +1437,28 @@ const MLSApp = (function() {
 
   function handleTourSubmit(e) {
     e.preventDefault();
-    const name = document.getElementById('tourName')?.value;
-    const date = document.getElementById('tourDate')?.value;
+    const listingId = document.getElementById('tourListingId')?.value || '';
+    const name = document.getElementById('tourName')?.value || '';
+    const email = document.getElementById('tourEmail')?.value || '';
+    const phone = document.getElementById('tourPhone')?.value || '';
+    const date = document.getElementById('tourDate')?.value || '';
+    const messageInput = document.querySelector('#tourForm textarea');
+    const message = messageInput ? messageInput.value : '';
+
+    const inquiryData = {
+      listingId,
+      name,
+      email,
+      phone,
+      date,
+      message
+    };
+
+    // Save to Firebase Cloud Firestore and Local Cache
+    MLSStore.saveViewingInquiry(inquiryData);
+
     closeTourModal();
-    showToast(`Site viewing requested for ${name} on ${date || 'the earliest schedule'}! Licensed Broker Alex Vance will contact you shortly.`, 'success');
+    showToast(`Site viewing request submitted for ${name}! Saved to database. Broker Alex Vance will contact you.`, 'success');
   }
 
   // View Mode switching (Split, Grid, Map)
@@ -1699,6 +1717,18 @@ const MLSApp = (function() {
     if (isRealtorAuthenticated) {
       isRealtorMode = true;
       syncRealtorModeUI();
+    }
+
+    // Subscribe to real-time Cloud Firestore updates
+    if (typeof FirebaseModule !== 'undefined' && FirebaseModule.subscribeToListings) {
+      FirebaseModule.subscribeToListings((cloudListings) => {
+        if (Array.isArray(cloudListings) && cloudListings.length > 0) {
+          listings = cloudListings;
+          MLSStore.saveAllListings(cloudListings);
+          applyFilters();
+          updateRealtorStats();
+        }
+      });
     }
   }
 

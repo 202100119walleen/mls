@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Iligan City MLS Listings collection: Allow public read, allow read/write for listings
+    match /listings/{listingId} {
+      allow read, write: if true;
+    }
+    
+    // Site viewing inquiries collection: Allow creation and management of inquiries
+    match /inquiries/{inquiryId} {
+      allow read, write: if true;
+    }
+    
+  }
+}

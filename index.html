@@ -83,6 +83,12 @@
           <span>About</span>
         </a>
 
+        <!-- Firebase Cloud Sync Status Badge -->
+        <div class="firebase-status-badge hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200" title="Firebase Cloud Database Status">
+          <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+          <span>Connecting Cloud...</span>
+        </div>
+
         <!-- Realtor Active Pill (Visible only when logged in as admin) -->
         <div id="navRealtorActiveBadge" class="hidden items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl text-xs font-bold shadow-sm">
           <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
@@ -102,8 +108,11 @@
       <div class="flex items-center gap-3">
         <span class="w-3 h-3 rounded-full bg-amber-400 animate-ping"></span>
         <div>
-          <span class="text-xs font-bold text-amber-400 uppercase tracking-widest">Realtor Admin Portal Active</span>
-          <span class="text-xs text-slate-400 ml-2 hidden sm:inline">Manage listings in Iligan City: update photos, prices, coordinates, & specs.</span>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-amber-400 uppercase tracking-widest">Realtor Admin Portal Active</span>
+            <div class="firebase-status-badge inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-900 text-slate-400 border border-slate-800"></div>
+          </div>
+          <span class="text-xs text-slate-400 hidden sm:inline">Manage listings in Iligan City: update photos, prices, coordinates, & specs.</span>
         </div>
       </div>
 
@@ -1149,7 +1158,13 @@
   <!-- LEAFLET JS FREE MAP API -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+  <!-- FIREBASE 10.13.0 SDKs (App, Firestore, Analytics) -->
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-analytics-compat.js"></script>
+
   <!-- APPLICATION SCRIPTS -->
+  <script src="js/firebase.js"></script>
   <script src="js/data.js"></script>
   <script src="js/map.js"></script>
   <script src="js/app.js"></script>

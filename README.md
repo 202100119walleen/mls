@@ -39,6 +39,7 @@ A modern, responsive real estate web application and Multiple Listing Service (M
 ---
 
 ## 🛠️ Technology Stack
+- **Firebase & Cloud Firestore (Project: `jobacsmls`)**: Real-time cloud database synchronization for property listings and viewing inquiries, with automatic offline fallback.
 - **HTML5 & Vanilla JavaScript**: Pure client-side performance, zero heavy framework dependencies.
 - **Tailwind CSS**: Modern, utility-first design via Tailwind Play CDN.
 - **Leaflet.js & OpenStreetMap**: 100% free mapping, geocoding, and reverse geocoding (no Google Maps API billing or keys needed).

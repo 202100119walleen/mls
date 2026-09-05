@@ -357,32 +357,49 @@ const MLSStore = {
     return list.find(item => item.id === id) || null;
   },
 
-  // Add or Update listing
+  // Add or Update listing (Local + Cloud Firestore)
   saveListing: function(listingData) {
     const list = this.getListings();
+    let savedItem = null;
+
     if (!listingData.id) {
       // Generate new MLS ID for Iligan
       const randomNum = Math.floor(2000 + Math.random() * 8000);
       listingData.id = `ILG-${randomNum}`;
       listingData.createdAt = new Date().toISOString().split('T')[0];
       list.unshift(listingData);
+      savedItem = listingData;
     } else {
       const index = list.findIndex(item => item.id === listingData.id);
       if (index !== -1) {
         list[index] = { ...list[index], ...listingData, updatedAt: new Date().toISOString().split('T')[0] };
+        savedItem = list[index];
       } else {
         list.unshift(listingData);
+        savedItem = listingData;
       }
     }
     this.saveAllListings(list);
-    return listingData;
+
+    // Sync to Cloud Firestore in background
+    if (typeof FirebaseModule !== 'undefined' && FirebaseModule.saveListing) {
+      FirebaseModule.saveListing(savedItem);
+    }
+
+    return savedItem;
   },
 
-  // Delete listing
+  // Delete listing (Local + Cloud Firestore)
   deleteListing: function(id) {
     let list = this.getListings();
     list = list.filter(item => item.id !== id);
     this.saveAllListings(list);
+
+    // Sync deletion to Cloud Firestore
+    if (typeof FirebaseModule !== 'undefined' && FirebaseModule.deleteListing) {
+      FirebaseModule.deleteListing(id);
+    }
+
     return list;
   },
 
@@ -390,6 +407,20 @@ const MLSStore = {
   resetToDefaults: function() {
     localStorage.removeItem(MLS_STORAGE_KEY);
     this.saveAllListings(DEFAULT_LISTINGS);
+
+    // Sync reset to Cloud Firestore
+    if (typeof FirebaseModule !== 'undefined' && FirebaseModule.resetToDefaults) {
+      FirebaseModule.resetToDefaults(DEFAULT_LISTINGS);
+    }
+
     return DEFAULT_LISTINGS;
+  },
+
+  // Save viewing inquiry into Firestore
+  saveViewingInquiry: function(inquiryData) {
+    if (typeof FirebaseModule !== 'undefined' && FirebaseModule.saveInquiry) {
+      FirebaseModule.saveInquiry(inquiryData);
+    }
   }
 };
+
