@@ -2441,6 +2441,71 @@ const MLSApp = (function() {
     showToast('Broker profile updated and synced to user side!', 'success');
   }
 
+  // Handle uploading broker profile photo from device with auto-compression
+  function handleBrokerAvatarUpload(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showToast('Please select a valid image file (JPG, PNG, WebP)', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      const img = new Image();
+      img.onload = function() {
+        // Resize avatar to max 400x400 with high quality to keep payload lightweight & fast
+        const canvas = document.createElement('canvas');
+        const maxDim = 400;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxDim) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          }
+        } else {
+          if (height > maxDim) {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+        // Update modal input and live preview
+        const avatarInput = document.getElementById('profileBrokerAvatar');
+        if (avatarInput) avatarInput.value = compressedDataUrl;
+
+        const previewImg = document.getElementById('profilePreviewAvatar');
+        if (previewImg) previewImg.src = compressedDataUrl;
+
+        showToast('Photo uploaded & preview updated! Click "Save Profile" to apply.', 'success');
+      };
+      img.src = evt.target.result;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  }
+
+  function clearBrokerAvatar() {
+    const defaultAvatar = 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=128&q=80';
+    const avatarInput = document.getElementById('profileBrokerAvatar');
+    if (avatarInput) avatarInput.value = defaultAvatar;
+
+    const previewImg = document.getElementById('profilePreviewAvatar');
+    if (previewImg) previewImg.src = defaultAvatar;
+
+    showToast('Reset avatar to default photo', 'info');
+  }
+
   function setupEventListeners() {
     const searchInput = document.getElementById('heroSearchInput');
     if (searchInput) {
@@ -2656,6 +2721,8 @@ const MLSApp = (function() {
     closeBrokerProfileModal,
     handleSaveBrokerProfile,
     updateBrokerProfileUI,
+    handleBrokerAvatarUpload,
+    clearBrokerAvatar,
     searchAddressOnMap,
     locateGpsAndAutoFillAddress,
     autoFillAddressFromPin,
