@@ -1055,6 +1055,7 @@ const MLSApp = (function() {
 
     renderListings();
     updateRealtorStats();
+    updateInquiryBadges();
   }
 
   function updateRealtorStats() {
@@ -1661,7 +1662,8 @@ const MLSApp = (function() {
         }
       });
 
-      if (brandNew.length > 0) {
+      // Only alert & notify if user is authenticated and active as Realtor Admin
+      if (brandNew.length > 0 && isRealtorAuthenticated && isRealtorMode) {
         playNotificationChime();
         const latest = brandNew[0];
         showInquiryNotificationToast(latest, brandNew.length);
@@ -1690,16 +1692,30 @@ const MLSApp = (function() {
   function updateInquiryBadges() {
     const newCount = inquiries.filter(i => i.status === 'new').length;
     
-    // Navbar badge
+    // Navbar Leads button & badge: ONLY visible to authorized Realtor Admin
+    const navBtn = document.getElementById('navInquiryBtn');
     const navBadge = document.getElementById('navInquiryBadge');
-    if (navBadge) {
-      if (newCount > 0) {
-        navBadge.innerText = newCount > 99 ? '99+' : newCount;
-        navBadge.classList.remove('hidden');
-        navBadge.classList.add('inline-flex', 'animate-pulse');
+    if (navBtn) {
+      if (isRealtorAuthenticated && isRealtorMode) {
+        navBtn.classList.remove('hidden');
+        navBtn.classList.add('inline-flex');
+        if (navBadge) {
+          if (newCount > 0) {
+            navBadge.innerText = newCount > 99 ? '99+' : newCount;
+            navBadge.classList.remove('hidden');
+            navBadge.classList.add('inline-flex', 'animate-pulse');
+          } else {
+            navBadge.classList.add('hidden');
+            navBadge.classList.remove('inline-flex', 'animate-pulse');
+          }
+        }
       } else {
-        navBadge.classList.add('hidden');
-        navBadge.classList.remove('inline-flex', 'animate-pulse');
+        navBtn.classList.add('hidden');
+        navBtn.classList.remove('inline-flex');
+        if (navBadge) {
+          navBadge.classList.add('hidden');
+          navBadge.classList.remove('inline-flex', 'animate-pulse');
+        }
       }
     }
 
@@ -2197,15 +2213,12 @@ const MLSApp = (function() {
     // Save directly to Firebase Cloud Firestore and Local Cache
     MLSStore.saveViewingInquiry(emailInquiryPayload);
 
-    // Play notification chime
-    playNotificationChime();
-
     closeEmailModal();
 
     const form = document.getElementById('emailComposeForm');
     if (form) form.reset();
 
-    showToast(`Email message sent to ${activeEmailData.name}! Lead logged to Cloud Firestore.`, 'success');
+    showToast(`Your message has been sent to the broker! They will contact you shortly.`, 'success');
   }
 
   // View Mode switching (Split, Grid, Map)

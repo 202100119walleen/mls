@@ -83,20 +83,19 @@
           <span>About</span>
         </a>
 
-        <!-- Client Inquiries / Leads Notification Button -->
+        <!-- Client Inquiries / Leads Notification Button (Only shown when admin is logged in as Realtor) -->
         <button onclick="MLSApp.openInquiriesModal()" 
                 id="navInquiryBtn"
-                class="relative px-3 py-2 bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-slate-200 shadow-sm"
+                class="hidden relative px-3 py-2 bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 rounded-xl text-xs font-bold transition items-center gap-1.5 border border-slate-200 shadow-sm"
                 title="View Client Inquiries & Viewing Leads">
           <i class="fa-solid fa-bell text-blue-600"></i>
           <span class="hidden sm:inline">Leads</span>
           <span id="navInquiryBadge" class="hidden px-1.5 py-0.2 bg-rose-600 text-white font-extrabold text-[10px] rounded-full shadow-sm">0</span>
         </button>
 
-        <!-- Firebase Cloud Sync Status Badge -->
-        <div class="firebase-status-badge hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200" title="Firebase Cloud Database Status">
-          <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-          <span>Connecting Cloud...</span>
+        <!-- Firebase Cloud Sync Status Indicator (Only Green Dot) -->
+        <div class="firebase-status-badge hidden sm:inline-flex items-center justify-center p-2 rounded-full bg-slate-100 border border-slate-200 cursor-pointer" title="Firebase Cloud Database Status">
+          <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
         </div>
 
         <!-- Realtor Active Pill (Visible only when logged in as admin) -->

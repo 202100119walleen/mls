@@ -68,21 +68,21 @@ const FirebaseModule = (function() {
       badge.onclick = () => retryConnection(true);
 
       if (status === 'connected') {
-        badge.className = 'firebase-status-badge cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition';
-        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Firebase Cloud Sync Active';
-        badge.title = 'Connected to Cloud Firestore (jobacsmls). Real-time sync active. Click to test sync.';
+        badge.className = 'firebase-status-badge cursor-pointer inline-flex items-center justify-center p-2 rounded-full bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition shadow-2xs';
+        badge.innerHTML = '<span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>';
+        badge.title = 'Firebase Cloud Connected (Real-Time Sync Active). Click to test sync.';
       } else if (status === 'connecting') {
-        badge.className = 'firebase-status-badge cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition';
-        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping"></span> Connecting Firebase...';
+        badge.className = 'firebase-status-badge cursor-pointer inline-flex items-center justify-center p-2 rounded-full bg-blue-50 border border-blue-200 hover:bg-blue-100 transition shadow-2xs';
+        badge.innerHTML = '<span class="w-2.5 h-2.5 rounded-full bg-blue-500 animate-ping"></span>';
         badge.title = 'Connecting to Firebase... Click to retry.';
       } else if (status === 'offline') {
-        badge.className = 'firebase-status-badge cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 transition';
-        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Local Cache Active';
+        badge.className = 'firebase-status-badge cursor-pointer inline-flex items-center justify-center p-2 rounded-full bg-slate-100 border border-slate-200 hover:bg-slate-200 transition shadow-2xs';
+        badge.innerHTML = '<span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>';
         badge.title = 'Running in offline/local cache mode. Click to retry cloud connection. ' + message;
       } else {
-        badge.className = 'firebase-status-badge cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition';
-        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Firestore Standby (Click to Retry)';
-        badge.title = 'Firestore connection standby: ' + (message || 'Click to test cloud connection.');
+        badge.className = 'firebase-status-badge cursor-pointer inline-flex items-center justify-center p-2 rounded-full bg-amber-50 border border-amber-200 hover:bg-amber-100 transition shadow-2xs';
+        badge.innerHTML = '<span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>';
+        badge.title = 'Firestore standby: ' + (message || 'Click to test cloud connection.');
       }
     });
   }
